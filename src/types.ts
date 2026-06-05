@@ -36,6 +36,7 @@ export interface EditableProviderConfig {
   disableClaudeAttribution: boolean;
   disableNonessentialTraffic: boolean;
   enableAutoMode: boolean;
+  enableAutoTheme: boolean;
 }
 
 export interface ApplySettingsInput {

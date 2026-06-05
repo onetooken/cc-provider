@@ -66,7 +66,8 @@ describe("settings merge", () => {
       maxEffort: false,
       disableClaudeAttribution: true,
       disableNonessentialTraffic: true,
-      enableAutoMode: true
+      enableAutoMode: true,
+      enableAutoTheme: true
     };
 
     const result = applyProviderToSettings(
@@ -77,7 +78,7 @@ describe("settings merge", () => {
       { config, authToken: "secret" }
     );
 
-    expect(result.settings.permissions).toEqual({ allow: ["Bash(git status)"] });
+    expect(result.settings.permissions).toEqual({ allow: ["Bash(git status)"], defaultMode: "auto" });
     expect(result.settings.env).toMatchObject({
       KEEP_ME: "yes",
       ANTHROPIC_BASE_URL: "https://example.com/anthropic",
@@ -88,7 +89,8 @@ describe("settings merge", () => {
     });
     expect(result.settings.attribution).toEqual({ commit: "", pr: "" });
     expect(result.settings.includeCoAuthoredBy).toBe(false);
-    expect(result.settings.defaultMode).toBe("auto");
+    expect(result.settings.defaultMode).toBeUndefined();
+    expect(result.settings.theme).toBe("auto");
   });
 
   it("removes previously managed keys when no longer present", () => {
@@ -101,7 +103,8 @@ describe("settings merge", () => {
       maxEffort: false,
       disableClaudeAttribution: false,
       disableNonessentialTraffic: false,
-      enableAutoMode: false
+      enableAutoMode: false,
+      enableAutoTheme: false
     };
 
     const result = applyProviderToSettings(
@@ -136,7 +139,8 @@ describe("settings merge", () => {
       maxEffort: false,
       disableClaudeAttribution: false,
       disableNonessentialTraffic: true,
-      enableAutoMode: false
+      enableAutoMode: false,
+      enableAutoTheme: true
     };
 
     const result = applyProviderToSettings(
@@ -161,12 +165,39 @@ describe("settings merge", () => {
       maxEffort: false,
       disableClaudeAttribution: false,
       disableNonessentialTraffic: false,
-      enableAutoMode: false
+      enableAutoMode: false,
+      enableAutoTheme: false
     };
 
-    const result = applyProviderToSettings({ defaultMode: "auto" }, { config });
+    const result = applyProviderToSettings(
+      {
+        defaultMode: "auto",
+        permissions: { defaultMode: "auto", allow: ["Bash(git status)"] }
+      },
+      { config }
+    );
 
     expect(result.settings.defaultMode).toBeUndefined();
+    expect(result.settings.permissions).toEqual({ allow: ["Bash(git status)"] });
+  });
+
+  it("removes plugin theme auto when unchecked", () => {
+    const config: EditableProviderConfig = {
+      providerId: "custom",
+      displayName: "Custom",
+      baseUrl: "https://example.com/anthropic",
+      models: {},
+      customEnv: {},
+      maxEffort: false,
+      disableClaudeAttribution: false,
+      disableNonessentialTraffic: false,
+      enableAutoMode: false,
+      enableAutoTheme: false
+    };
+
+    const result = applyProviderToSettings({ theme: "auto" }, { config });
+
+    expect(result.settings.theme).toBeUndefined();
   });
 });
 

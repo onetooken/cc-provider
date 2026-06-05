@@ -86,7 +86,8 @@ export function applyProviderToSettings(
 
   settings.env = env;
   applyAttributionSettings(settings, input.config.disableClaudeAttribution);
-  applyDefaultModeSettings(settings, input.config.enableAutoMode);
+  applyPermissionDefaultModeSettings(settings, input.config.enableAutoMode);
+  applyThemeSettings(settings, input.config.enableAutoTheme);
   return { settings, managedEnvKeys: managedKeys };
 }
 
@@ -165,13 +166,37 @@ function isDisabledAttribution(value: unknown): boolean {
   return isRecord(value) && value.commit === "" && value.pr === "";
 }
 
-function applyDefaultModeSettings(settings: Record<string, unknown>, enableAutoMode: boolean): void {
+function applyPermissionDefaultModeSettings(settings: Record<string, unknown>, enableAutoMode: boolean): void {
+  const permissions = isRecord(settings.permissions) ? { ...settings.permissions } : {};
   if (enableAutoMode) {
-    settings.defaultMode = "auto";
+    permissions.defaultMode = "auto";
+    settings.permissions = permissions;
+    if (settings.defaultMode === "auto") {
+      delete settings.defaultMode;
+    }
     return;
+  }
+
+  if (permissions.defaultMode === "auto") {
+    delete permissions.defaultMode;
+  }
+  if (Object.keys(permissions).length > 0) {
+    settings.permissions = permissions;
+  } else if (isRecord(settings.permissions)) {
+    delete settings.permissions;
   }
   if (settings.defaultMode === "auto") {
     delete settings.defaultMode;
+  }
+}
+
+function applyThemeSettings(settings: Record<string, unknown>, enableAutoTheme: boolean): void {
+  if (enableAutoTheme) {
+    settings.theme = "auto";
+    return;
+  }
+  if (settings.theme === "auto") {
+    delete settings.theme;
   }
 }
 
