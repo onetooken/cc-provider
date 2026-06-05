@@ -35,6 +35,7 @@ export interface EditableProviderConfig {
   maxEffort: boolean;
   disableClaudeAttribution: boolean;
   disableNonessentialTraffic: boolean;
+  enableAutoMode: boolean;
 }
 
 export interface ApplySettingsInput {

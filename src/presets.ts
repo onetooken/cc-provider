@@ -75,7 +75,8 @@ export function configFromPreset(preset: ProviderPreset): EditableProviderConfig
     customEnv: { ...preset.defaultEnv },
     maxEffort: preset.defaultEnv.CLAUDE_CODE_EFFORT_LEVEL === "max",
     disableClaudeAttribution: true,
-    disableNonessentialTraffic: preset.defaultEnv.CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC !== "0"
+    disableNonessentialTraffic: preset.defaultEnv.CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC !== "0",
+    enableAutoMode: true
   };
 }
 

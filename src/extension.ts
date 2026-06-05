@@ -126,7 +126,8 @@ class CcProviderViewProvider implements vscode.WebviewViewProvider {
       customEnv: {},
       maxEffort: false,
       disableClaudeAttribution: true,
-      disableNonessentialTraffic: true
+      disableNonessentialTraffic: true,
+      enableAutoMode: true
     };
     await this.context.globalState.update(CONFIGS_KEY, configs);
     await this.context.globalState.update(ACTIVE_PROVIDER_KEY, id);
@@ -271,7 +272,8 @@ function parseConfigPayload(payload: unknown): EditableProviderConfig {
     customEnv: isRecord(payload.customEnv) ? stringRecord(payload.customEnv, new Set(CORE_MANAGED_ENV_KEYS)) : {},
     maxEffort: Boolean(payload.maxEffort),
     disableClaudeAttribution: payload.disableClaudeAttribution !== false,
-    disableNonessentialTraffic: payload.disableNonessentialTraffic !== false
+    disableNonessentialTraffic: payload.disableNonessentialTraffic !== false,
+    enableAutoMode: payload.enableAutoMode !== false
   };
 }
 
@@ -306,7 +308,8 @@ function sanitizeConfig(config: EditableProviderConfig): EditableProviderConfig 
     ...config,
     customEnv: removeManagedCustomEnv(config.customEnv ?? {}),
     disableClaudeAttribution: config.disableClaudeAttribution !== false,
-    disableNonessentialTraffic: config.disableNonessentialTraffic !== false
+    disableNonessentialTraffic: config.disableNonessentialTraffic !== false,
+    enableAutoMode: config.enableAutoMode !== false
   };
 }
 

@@ -191,6 +191,10 @@ export function getWebviewHtml(webview: vscode.Webview): string {
         <span>禁用非必要流量</span>
         <input id="disableNonessentialTraffic" type="checkbox">
       </div>
+      <div class="switch-row">
+        <span>默认开启 auto mode</span>
+        <input id="enableAutoMode" type="checkbox">
+      </div>
     </section>
 
     <section class="section">
@@ -231,7 +235,7 @@ export function getWebviewHtml(webview: vscode.Webview): string {
     let state = {};
     let activeProvider = "";
 
-    const ids = ["displayName", "baseUrl", "authToken", "model", "opus", "sonnet", "haiku", "subagent", "maxEffort", "disableClaudeAttribution", "disableNonessentialTraffic"];
+    const ids = ["displayName", "baseUrl", "authToken", "model", "opus", "sonnet", "haiku", "subagent", "maxEffort", "disableClaudeAttribution", "disableNonessentialTraffic", "enableAutoMode"];
     const el = Object.fromEntries(ids.map((id) => [id, document.getElementById(id)]));
     const providerList = document.getElementById("providerList");
     const envRows = document.getElementById("envRows");
@@ -277,6 +281,7 @@ export function getWebviewHtml(webview: vscode.Webview): string {
       el.maxEffort.checked = Boolean(config.maxEffort);
       el.disableClaudeAttribution.checked = config.disableClaudeAttribution !== false;
       el.disableNonessentialTraffic.checked = config.disableNonessentialTraffic !== false;
+      el.enableAutoMode.checked = config.enableAutoMode !== false;
       renderEnvRows(config.customEnv || {});
       document.getElementById("settingsPath").textContent = state.settingsPath || "";
       document.getElementById("preview").textContent = state.settingsError || state.settingsPreview || "{}";
@@ -345,7 +350,8 @@ export function getWebviewHtml(webview: vscode.Webview): string {
         customEnv: collectEnv(),
         maxEffort: el.maxEffort.checked,
         disableClaudeAttribution: el.disableClaudeAttribution.checked,
-        disableNonessentialTraffic: el.disableNonessentialTraffic.checked
+        disableNonessentialTraffic: el.disableNonessentialTraffic.checked,
+        enableAutoMode: el.enableAutoMode.checked
       };
     }
 

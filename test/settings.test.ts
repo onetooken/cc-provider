@@ -65,7 +65,8 @@ describe("settings merge", () => {
       customEnv: { API_TIMEOUT_MS: "1000" },
       maxEffort: false,
       disableClaudeAttribution: true,
-      disableNonessentialTraffic: true
+      disableNonessentialTraffic: true,
+      enableAutoMode: true
     };
 
     const result = applyProviderToSettings(
@@ -87,6 +88,7 @@ describe("settings merge", () => {
     });
     expect(result.settings.attribution).toEqual({ commit: "", pr: "" });
     expect(result.settings.includeCoAuthoredBy).toBe(false);
+    expect(result.settings.defaultMode).toBe("auto");
   });
 
   it("removes previously managed keys when no longer present", () => {
@@ -98,7 +100,8 @@ describe("settings merge", () => {
       customEnv: {},
       maxEffort: false,
       disableClaudeAttribution: false,
-      disableNonessentialTraffic: false
+      disableNonessentialTraffic: false,
+      enableAutoMode: false
     };
 
     const result = applyProviderToSettings(
@@ -132,7 +135,8 @@ describe("settings merge", () => {
       customEnv: {},
       maxEffort: false,
       disableClaudeAttribution: false,
-      disableNonessentialTraffic: true
+      disableNonessentialTraffic: true,
+      enableAutoMode: false
     };
 
     const result = applyProviderToSettings(
@@ -145,6 +149,24 @@ describe("settings merge", () => {
 
     expect(result.settings.attribution).toBeUndefined();
     expect(result.settings.includeCoAuthoredBy).toBeUndefined();
+  });
+
+  it("removes plugin default auto mode when unchecked", () => {
+    const config: EditableProviderConfig = {
+      providerId: "custom",
+      displayName: "Custom",
+      baseUrl: "https://example.com/anthropic",
+      models: {},
+      customEnv: {},
+      maxEffort: false,
+      disableClaudeAttribution: false,
+      disableNonessentialTraffic: false,
+      enableAutoMode: false
+    };
+
+    const result = applyProviderToSettings({ defaultMode: "auto" }, { config });
+
+    expect(result.settings.defaultMode).toBeUndefined();
   });
 });
 

@@ -86,6 +86,7 @@ export function applyProviderToSettings(
 
   settings.env = env;
   applyAttributionSettings(settings, input.config.disableClaudeAttribution);
+  applyDefaultModeSettings(settings, input.config.enableAutoMode);
   return { settings, managedEnvKeys: managedKeys };
 }
 
@@ -162,6 +163,16 @@ function applyAttributionSettings(settings: Record<string, unknown>, disabled: b
 
 function isDisabledAttribution(value: unknown): boolean {
   return isRecord(value) && value.commit === "" && value.pr === "";
+}
+
+function applyDefaultModeSettings(settings: Record<string, unknown>, enableAutoMode: boolean): void {
+  if (enableAutoMode) {
+    settings.defaultMode = "auto";
+    return;
+  }
+  if (settings.defaultMode === "auto") {
+    delete settings.defaultMode;
+  }
 }
 
 export function parseSettingsJson(text: string): Record<string, unknown> {
