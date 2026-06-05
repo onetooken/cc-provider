@@ -1,0 +1,57 @@
+{
+  "name": "cc-provider",
+  "displayName": "CC Provider",
+  "description": "Switch Claude Code providers from the VS Code sidebar.",
+  "version": "0.0.1",
+  "publisher": "onetoken",
+  "engines": {
+    "vscode": "^1.90.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onView:cc-provider.view",
+    "onCommand:cc-provider.openSettingsFile"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "cc-provider.openSettingsFile",
+        "title": "CC Provider: Open Claude Settings"
+      }
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "cc-provider",
+          "title": "CC Provider",
+          "icon": "media/icon.svg"
+        }
+      ]
+    },
+    "views": {
+      "cc-provider": [
+        {
+          "id": "cc-provider.view",
+          "name": "Providers",
+          "type": "webview"
+        }
+      ]
+    }
+  },
+  "scripts": {
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "test": "vitest run",
+    "package": "npm run compile && npx @vscode/vsce package --no-dependencies --allow-missing-repository"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.30",
+    "@types/vscode": "^1.90.0",
+    "@vscode/vsce": "^3.6.0",
+    "typescript": "^5.8.3",
+    "vitest": "^4.1.8"
+  }
+}
