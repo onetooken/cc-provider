@@ -45,7 +45,7 @@ export async function readClaudeSettings(settingsPath = getClaudeSettingsPath())
 export async function writeClaudeSettings(input: ApplySettingsInput, settingsPath = getClaudeSettingsPath()): Promise<ApplySettingsResult> {
   const read = await readClaudeSettings(settingsPath);
   if (read.error) {
-    throw new Error(`无法读取 Claude settings：${read.error}`);
+    throw new Error(`Unable to read Claude settings: ${read.error}`);
   }
 
   const current = read.settings ?? {};
@@ -203,7 +203,7 @@ function applyThemeSettings(settings: Record<string, unknown>, enableAutoTheme: 
 export function parseSettingsJson(text: string): Record<string, unknown> {
   const parsed = JSON.parse(text);
   if (!isRecord(parsed)) {
-    throw new Error("settings.json 必须是 JSON 对象");
+    throw new Error("settings.json must be a JSON object");
   }
   return parsed;
 }

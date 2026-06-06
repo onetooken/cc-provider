@@ -26,7 +26,7 @@ export const PROVIDER_PRESETS: ProviderPreset[] = [
   {
     id: "zhipu",
     name: "Zhipu GLM Coding Plan",
-    description: "智谱 GLM Coding Plan 的 Claude Code 兼容配置。",
+    description: "Zhipu GLM Coding Plan Claude Code-compatible configuration.",
     baseUrl: "https://open.bigmodel.cn/api/anthropic",
     models: {
       opus: "glm-5.1",
@@ -48,7 +48,7 @@ export const PROVIDER_PRESETS: ProviderPreset[] = [
   {
     id: "mimo",
     name: "Xiaomi MiMo Token Plan",
-    description: "Xiaomi MiMo Token Plan 默认值，所有字段都可编辑。",
+    description: "Xiaomi MiMo Token Plan defaults. Every field remains editable.",
     baseUrl: "https://token-plan-cn.xiaomimimo.com/anthropic",
     models: {
       model: "mimo-v2.5-pro[1m]",

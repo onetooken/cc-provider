@@ -1,0 +1,6 @@
+{
+  "extension.description": "在 VS Code 侧栏快速切换 Claude Code 提供商配置。",
+  "command.openSettingsFile.title": "CC Provider: 打开 Claude Settings",
+  "viewsContainer.title": "CC Provider",
+  "view.providers.name": "提供商"
+}

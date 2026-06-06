@@ -204,6 +204,6 @@ describe("settings merge", () => {
 
 describe("settings JSON parsing", () => {
   it("rejects non-object JSON", () => {
-    expect(() => parseSettingsJson("[]")).toThrow("settings.json 必须是 JSON 对象");
+    expect(() => parseSettingsJson("[]")).toThrow("settings.json must be a JSON object");
   });
 });

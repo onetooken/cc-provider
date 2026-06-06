@@ -1,0 +1,6 @@
+{
+  "extension.description": "Switch Claude Code providers from the VS Code sidebar.",
+  "command.openSettingsFile.title": "CC Provider: Open Claude Settings",
+  "viewsContainer.title": "CC Provider",
+  "view.providers.name": "Providers"
+}

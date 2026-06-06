@@ -1,7 +1,7 @@
 {
   "name": "cc-provider",
   "displayName": "CC Provider",
-  "description": "Switch Claude Code providers from the VS Code sidebar.",
+  "description": "%extension.description%",
   "version": "0.0.1",
   "publisher": "onetoken",
   "engines": {
@@ -19,14 +19,14 @@
     "commands": [
       {
         "command": "cc-provider.openSettingsFile",
-        "title": "CC Provider: Open Claude Settings"
+        "title": "%command.openSettingsFile.title%"
       }
     ],
     "viewsContainers": {
       "activitybar": [
         {
           "id": "cc-provider",
-          "title": "CC Provider",
+          "title": "%viewsContainer.title%",
           "icon": "media/icon.svg"
         }
       ]
@@ -35,7 +35,7 @@
       "cc-provider": [
         {
           "id": "cc-provider.view",
-          "name": "Providers",
+          "name": "%view.providers.name%",
           "type": "webview"
         }
       ]

@@ -4,6 +4,7 @@ import { PROVIDER_PRESETS, configFromPreset, getPreset } from "./presets";
 import { CORE_MANAGED_ENV_KEYS, getClaudeSettingsPath, readClaudeSettings, writeClaudeSettings } from "./settings";
 import { EditableProviderConfig } from "./types";
 import { getWebviewHtml } from "./webview";
+import { AppMessages, formatMessage, getLocale, getMessages } from "./i18n";
 
 const CONFIGS_KEY = "ccProvider.configs";
 const ACTIVE_PROVIDER_KEY = "ccProvider.activeProvider";
@@ -29,6 +30,8 @@ export function deactivate(): void {
 
 class CcProviderViewProvider implements vscode.WebviewViewProvider {
   private view?: vscode.WebviewView;
+  private readonly locale = getLocale(vscode.env.language);
+  private readonly messages = getMessages(this.locale);
 
   public constructor(private readonly context: vscode.ExtensionContext) {}
 
@@ -37,7 +40,7 @@ class CcProviderViewProvider implements vscode.WebviewViewProvider {
     webviewView.webview.options = {
       enableScripts: true
     };
-    webviewView.webview.html = getWebviewHtml(webviewView.webview);
+    webviewView.webview.html = getWebviewHtml(webviewView.webview, this.locale, this.messages);
     webviewView.webview.onDidReceiveMessage((message) => this.handleMessage(message));
   }
 
@@ -74,17 +77,17 @@ class CcProviderViewProvider implements vscode.WebviewViewProvider {
   }
 
   private async saveConfig(payload: unknown): Promise<void> {
-    const incoming = parseConfigPayload(payload);
+    const incoming = parseConfigPayload(payload, this.messages);
     const configs = this.getConfigs();
     configs[incoming.providerId] = withoutTokenState(incoming);
     await this.context.globalState.update(CONFIGS_KEY, configs);
     await this.context.globalState.update(ACTIVE_PROVIDER_KEY, incoming.providerId);
     await this.saveTokenIfPresent(incoming.providerId, payload);
-    await this.postState("配置已保存。");
+    await this.postState(this.messages.configSaved);
   }
 
   private async applyConfig(payload: unknown): Promise<void> {
-    const incoming = parseConfigPayload(payload);
+    const incoming = parseConfigPayload(payload, this.messages);
     const configs = this.getConfigs();
     configs[incoming.providerId] = withoutTokenState(incoming);
     await this.context.globalState.update(CONFIGS_KEY, configs);
@@ -103,9 +106,9 @@ class CcProviderViewProvider implements vscode.WebviewViewProvider {
     );
     await this.context.globalState.update(MANAGED_ENV_KEYS_KEY, result.managedEnvKeys);
     await this.context.globalState.update(APPLIED_PROVIDER_KEY, incoming.providerId);
-    await this.postState(`已应用到 ${getClaudeSettingsPath()}。`);
+    await this.postState(formatMessage(this.messages.appliedToPath, { path: getClaudeSettingsPath() }));
     void vscode.window.showInformationMessage(
-      result.backupPath ? `CC Provider 已应用配置，备份已创建。` : "CC Provider 已应用配置。"
+      result.backupPath ? this.messages.appliedConfigWithBackup : this.messages.appliedConfig
     );
   }
 
@@ -114,7 +117,7 @@ class CcProviderViewProvider implements vscode.WebviewViewProvider {
     const id = `custom-${Date.now()}`;
     configs[id] = {
       providerId: id,
-      displayName: "Custom Provider",
+      displayName: this.messages.customProvider,
       baseUrl: "https://example.com/anthropic",
       models: {
         model: "custom-model",
@@ -132,35 +135,35 @@ class CcProviderViewProvider implements vscode.WebviewViewProvider {
     };
     await this.context.globalState.update(CONFIGS_KEY, configs);
     await this.context.globalState.update(ACTIVE_PROVIDER_KEY, id);
-    await this.postState("已新增自定义 Provider。");
+    await this.postState(this.messages.configSaved);
   }
 
   private async deleteProvider(payload: unknown): Promise<void> {
     const providerId = isRecord(payload) && typeof payload.providerId === "string" ? payload.providerId : undefined;
     if (!providerId) {
-      throw new Error("找不到要删除的 Provider。");
+      throw new Error(this.messages.noProviderToDelete);
     }
     if (getPreset(providerId)) {
-      throw new Error("内置 Provider 不能删除，可以恢复默认值。");
+      throw new Error(this.messages.providerCannotDelete);
     }
     const configs = this.getConfigs();
     delete configs[providerId];
     await this.context.secrets.delete(secretKey(providerId));
     await this.context.globalState.update(CONFIGS_KEY, configs);
     await this.context.globalState.update(ACTIVE_PROVIDER_KEY, PROVIDER_PRESETS[0].id);
-    await this.postState("已删除自定义 Provider。");
+    await this.postState(this.messages.providerDeleted);
   }
 
   private async resetProvider(payload: unknown): Promise<void> {
     const providerId = isRecord(payload) && typeof payload.providerId === "string" ? payload.providerId : undefined;
     const preset = providerId ? getPreset(providerId) : undefined;
     if (!preset) {
-      throw new Error("找不到要重置的提供商预置。");
+      throw new Error(this.messages.noPresetFound);
     }
     const configs = this.getConfigs();
     configs[preset.id] = configFromPreset(preset);
     await this.context.globalState.update(CONFIGS_KEY, configs);
-    await this.postState("已恢复为默认值。");
+    await this.postState(this.messages.defaultSettingsRestored);
   }
 
   private async postState(status?: string): Promise<void> {
@@ -180,6 +183,8 @@ class CcProviderViewProvider implements vscode.WebviewViewProvider {
       type: "state",
       payload: {
         presets: PROVIDER_PRESETS,
+        locale: this.locale,
+        messages: this.messages,
         providers: this.getProviderList(configs),
         configs,
         activeProvider,
@@ -225,7 +230,7 @@ class CcProviderViewProvider implements vscode.WebviewViewProvider {
       .map((config) => ({
         id: config.providerId,
         name: config.displayName,
-        description: "用户自定义 Provider。",
+        description: this.messages.customProviderDescription,
         baseUrl: config.baseUrl,
         isBuiltin: false
       }));
@@ -260,15 +265,15 @@ async function openClaudeSettingsFile(): Promise<void> {
   }
 }
 
-function parseConfigPayload(payload: unknown): EditableProviderConfig {
+function parseConfigPayload(payload: unknown, messages: AppMessages): EditableProviderConfig {
   if (!isRecord(payload)) {
-    throw new Error("配置格式无效。");
+    throw new Error(messages.configFormatInvalid);
   }
-  const providerId = requiredString(payload.providerId, "providerId");
+  const providerId = requiredString(payload.providerId, "providerId", messages);
   return {
     providerId,
-    displayName: requiredString(payload.displayName, "displayName"),
-    baseUrl: requiredString(payload.baseUrl, "baseUrl"),
+    displayName: requiredString(payload.displayName, "displayName", messages),
+    baseUrl: requiredString(payload.baseUrl, "baseUrl", messages),
     models: isRecord(payload.models) ? stringRecord(payload.models) : {},
     customEnv: isRecord(payload.customEnv) ? stringRecord(payload.customEnv, new Set(CORE_MANAGED_ENV_KEYS)) : {},
     maxEffort: Boolean(payload.maxEffort),
@@ -350,9 +355,9 @@ function replaceDefaultModel(value: string | undefined, replacements: Record<str
   return replacements[value] ?? value;
 }
 
-function requiredString(value: unknown, field: string): string {
+function requiredString(value: unknown, field: string, messages: AppMessages): string {
   if (typeof value !== "string" || value.trim().length === 0) {
-    throw new Error(`${field} 不能为空。`);
+    throw new Error(formatMessage(messages.requiredField, { field }));
   }
   return value.trim();
 }

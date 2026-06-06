@@ -1,9 +1,12 @@
 import * as vscode from "vscode";
+import { AppLocale, AppMessages } from "./i18n";
 
-export function getWebviewHtml(webview: vscode.Webview): string {
+export function getWebviewHtml(webview: vscode.Webview, locale: AppLocale, messages: AppMessages): string {
   const nonce = getNonce();
+  const msgJson = JSON.stringify(messages).replace(/</g, "\\u003c");
+
   return `<!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="${locale}">
 <head>
   <meta charset="UTF-8">
   <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${webview.cspSource} 'unsafe-inline'; script-src 'nonce-${nonce}';">
@@ -149,31 +152,31 @@ export function getWebviewHtml(webview: vscode.Webview): string {
 <body>
   <main class="app">
     <div class="actions">
-      <button class="primary" id="addProvider">新增 Provider</button>
+      <button class="primary" id="addProvider">${escapeHtml(messages.addProvider)}</button>
     </div>
     <div class="provider-list" id="providerList"></div>
 
     <section class="section">
       <div class="name-row">
-        <h2 id="providerTitle">Provider</h2>
+        <h2 id="providerTitle">${escapeHtml(messages.providerTitle)}</h2>
         <span class="pill" id="tokenStatus">Token</span>
       </div>
       <label>
-        <span>名称</span>
+        <span>${escapeHtml(messages.displayName)}</span>
         <input id="displayName" autocomplete="off">
       </label>
       <label>
-        <span>Base URL</span>
+        <span>${escapeHtml(messages.baseUrl)}</span>
         <input id="baseUrl" autocomplete="off">
       </label>
       <label>
-        <span>API Token</span>
-        <input id="authToken" type="password" autocomplete="off" placeholder="留空则使用已保存 Token">
+        <span>${escapeHtml(messages.apiToken)}</span>
+        <input id="authToken" type="password" autocomplete="off" placeholder="${escapeHtml(messages.tokenPlaceholder)}">
       </label>
     </section>
 
     <section class="section">
-      <h3>模型槽位</h3>
+      <h3>${escapeHtml(messages.modelSlots)}</h3>
       <label><span>ANTHROPIC_MODEL</span><input id="model"></label>
       <label><span>OPUS</span><input id="opus"></label>
       <label><span>SONNET</span><input id="sonnet"></label>
@@ -184,51 +187,51 @@ export function getWebviewHtml(webview: vscode.Webview): string {
         <input id="maxEffort" type="checkbox">
       </div>
       <div class="switch-row">
-        <span>去除 cc co-author 声明</span>
+        <span>${escapeHtml(messages.disableAttribution)}</span>
         <input id="disableClaudeAttribution" type="checkbox">
       </div>
       <div class="switch-row">
-        <span>禁用非必要流量</span>
+        <span>${escapeHtml(messages.disableNonessentialTraffic)}</span>
         <input id="disableNonessentialTraffic" type="checkbox">
       </div>
       <div class="switch-row">
-        <span>默认开启 auto mode</span>
+        <span>${escapeHtml(messages.autoMode)}</span>
         <input id="enableAutoMode" type="checkbox">
       </div>
       <div class="switch-row">
-        <span>主题跟随 auto</span>
+        <span>${escapeHtml(messages.themeAuto)}</span>
         <input id="enableAutoTheme" type="checkbox">
       </div>
     </section>
 
     <section class="section">
       <div class="name-row">
-        <h3>自定义 env</h3>
-        <button class="icon" id="addEnv" title="添加环境变量">+</button>
+        <h3>${escapeHtml(messages.customEnv)}</h3>
+        <button class="icon" id="addEnv" title="${escapeHtml(messages.customEnv)}">+</button>
       </div>
       <div id="envRows"></div>
     </section>
 
     <section class="section">
-      <h3>用量</h3>
-      <div class="muted tiny">用量限制和使用情况接口已预留，当前版本暂不连接厂商 API。</div>
+      <h3>${escapeHtml(messages.quota)}</h3>
+      <div class="muted tiny">${escapeHtml(messages.quotaPlaceholder)}</div>
     </section>
 
     <section class="section">
       <div class="actions">
-        <button id="reset">恢复默认</button>
-        <button id="deleteProvider">删除</button>
-        <button id="save">保存</button>
+        <button id="reset">${escapeHtml(messages.reset)}</button>
+        <button id="deleteProvider">${escapeHtml(messages.delete)}</button>
+        <button id="save">${escapeHtml(messages.save)}</button>
       </div>
       <div class="actions">
-        <button id="openSettings">打开 settings</button>
-        <button class="primary" id="apply">应用</button>
+        <button id="openSettings">${escapeHtml(messages.openSettings)}</button>
+        <button class="primary" id="apply">${escapeHtml(messages.apply)}</button>
       </div>
       <div class="status" id="status"></div>
     </section>
 
     <section class="section">
-      <h3>当前 settings.json</h3>
+      <h3>${escapeHtml(messages.settingsPreview)}</h3>
       <div class="muted tiny" id="settingsPath"></div>
       <pre id="preview"></pre>
     </section>
@@ -236,6 +239,7 @@ export function getWebviewHtml(webview: vscode.Webview): string {
 
   <script nonce="${nonce}">
     const vscode = acquireVsCodeApi();
+    const messages = ${msgJson};
     let state = {};
     let activeProvider = "";
 
@@ -271,7 +275,7 @@ export function getWebviewHtml(webview: vscode.Webview): string {
       const config = currentConfig();
       const provider = currentProvider();
       document.getElementById("providerTitle").textContent = config.displayName || provider.name;
-      document.getElementById("tokenStatus").textContent = state.tokenStatus?.[activeProvider] ? "Token 已保存" : "Token 未保存";
+      document.getElementById("tokenStatus").textContent = state.tokenStatus?.[activeProvider] ? messages.tokenSaved : messages.tokenUnsaved;
       document.getElementById("reset").disabled = !provider.isBuiltin;
       document.getElementById("deleteProvider").disabled = provider.isBuiltin;
       el.displayName.value = config.displayName || provider.name || "";
@@ -309,10 +313,10 @@ export function getWebviewHtml(webview: vscode.Webview): string {
 
     function providerBadge(providerId) {
       if (providerId === state.appliedProvider) {
-        return "<span class='pill applied'>已应用</span>";
+        return "<span class='pill applied'>" + escapeHtml(messages.applied) + "</span>";
       }
       if (providerId === activeProvider) {
-        return "<span class='pill pending'>待应用</span>";
+        return "<span class='pill pending'>" + escapeHtml(messages.pending) + "</span>";
       }
       return "";
     }
@@ -332,7 +336,10 @@ export function getWebviewHtml(webview: vscode.Webview): string {
     function addEnvRow(key, value) {
       const row = document.createElement("div");
       row.className = "env-row";
-      row.innerHTML = "<input class='env-key' placeholder='KEY'><input class='env-value' placeholder='value'><button class='icon' title='删除'>x</button>";
+      row.innerHTML = "<input class='env-key'><input class='env-value'><button class='icon'>x</button>";
+      row.querySelector(".env-key").placeholder = messages.envKeyPlaceholder;
+      row.querySelector(".env-value").placeholder = messages.envValuePlaceholder;
+      row.querySelector("button").title = messages.deleteEnv;
       row.querySelector(".env-key").value = key;
       row.querySelector(".env-value").value = value;
       row.querySelector("button").addEventListener("click", () => row.remove());
@@ -397,6 +404,16 @@ export function getWebviewHtml(webview: vscode.Webview): string {
   </script>
 </body>
 </html>`;
+}
+
+function escapeHtml(value: string): string {
+  return value.replace(/[&<>"']/g, (char) => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#039;"
+  })[char] ?? char);
 }
 
 function getNonce(): string {
