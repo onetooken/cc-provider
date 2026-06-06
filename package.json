@@ -4,11 +4,20 @@
   "description": "%extension.description%",
   "version": "0.0.1",
   "publisher": "onetoken",
+  "license": "MIT",
+  "icon": "media/icon.png",
   "engines": {
     "vscode": "^1.90.0"
   },
   "categories": [
     "Other"
+  ],
+  "keywords": [
+    "claude",
+    "claude-code",
+    "anthropic",
+    "provider",
+    "settings"
   ],
   "activationEvents": [
     "onView:cc-provider.view",

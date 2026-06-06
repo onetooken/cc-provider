@@ -1,7 +1,11 @@
 node_modules/
+.vscode/
 src/
 test/
 *.ts
+*.map
+**/*.map
+media/icon-marketplace.svg
 tsconfig.json
 vitest.config.ts
 package-lock.json
