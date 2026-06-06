@@ -22,6 +22,9 @@ const DISABLED_ATTRIBUTION = {
   pr: ""
 };
 
+const REDACTED_SECRET = "••••••••••••";
+const SECRET_KEY_PATTERN = /token|auth|api[_-]?key|apikey|secret/i;
+
 export function getClaudeSettingsPath(homeDir = os.homedir()): string {
   return path.join(homeDir, ".claude", "settings.json");
 }
@@ -206,6 +209,24 @@ export function parseSettingsJson(text: string): Record<string, unknown> {
     throw new Error("settings.json must be a JSON object");
   }
   return parsed;
+}
+
+export function redactSettingsForPreview(value: unknown): unknown {
+  if (Array.isArray(value)) {
+    return value.map((item) => redactSettingsForPreview(item));
+  }
+  if (!isRecord(value)) {
+    return value;
+  }
+
+  return Object.fromEntries(
+    Object.entries(value).map(([key, item]) => {
+      if (SECRET_KEY_PATTERN.test(key) && typeof item === "string" && item.length > 0) {
+        return [key, REDACTED_SECRET];
+      }
+      return [key, redactSettingsForPreview(item)];
+    })
+  );
 }
 
 function stringEntries(input: Record<string, string>): Record<string, string> {

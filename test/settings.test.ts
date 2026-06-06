@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { applyProviderToSettings, buildProviderEnv, parseSettingsJson } from "../src/settings";
+import { applyProviderToSettings, buildProviderEnv, parseSettingsJson, redactSettingsForPreview } from "../src/settings";
 import { configFromPreset, getPreset } from "../src/presets";
 import { EditableProviderConfig } from "../src/types";
 
@@ -205,5 +205,33 @@ describe("settings merge", () => {
 describe("settings JSON parsing", () => {
   it("rejects non-object JSON", () => {
     expect(() => parseSettingsJson("[]")).toThrow("settings.json must be a JSON object");
+  });
+});
+
+describe("settings preview redaction", () => {
+  it("redacts tokens and secrets recursively", () => {
+    const preview = redactSettingsForPreview({
+      env: {
+        ANTHROPIC_AUTH_TOKEN: "sk-live",
+        CUSTOM_API_KEY: "api-key",
+        KEEP_ME: "visible"
+      },
+      nested: {
+        auth: "auth-value",
+        items: [{ secret: "secret-value" }, { value: "plain" }]
+      }
+    });
+
+    expect(preview).toEqual({
+      env: {
+        ANTHROPIC_AUTH_TOKEN: "••••••••••••",
+        CUSTOM_API_KEY: "••••••••••••",
+        KEEP_ME: "visible"
+      },
+      nested: {
+        auth: "••••••••••••",
+        items: [{ secret: "••••••••••••" }, { value: "plain" }]
+      }
+    });
   });
 });

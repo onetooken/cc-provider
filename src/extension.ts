@@ -1,7 +1,13 @@
 import * as vscode from "vscode";
 import * as path from "node:path";
 import { PROVIDER_PRESETS, configFromPreset, getPreset } from "./presets";
-import { CORE_MANAGED_ENV_KEYS, getClaudeSettingsPath, readClaudeSettings, writeClaudeSettings } from "./settings";
+import {
+  CORE_MANAGED_ENV_KEYS,
+  getClaudeSettingsPath,
+  readClaudeSettings,
+  redactSettingsForPreview,
+  writeClaudeSettings
+} from "./settings";
 import { EditableProviderConfig } from "./types";
 import { getWebviewHtml } from "./webview";
 import { AppMessages, formatMessage, getLocale, getMessages } from "./i18n";
@@ -65,6 +71,9 @@ class CcProviderViewProvider implements vscode.WebviewViewProvider {
         case "resetProvider":
           await this.resetProvider(message.payload);
           break;
+        case "revealToken":
+          await this.revealToken(message.payload);
+          break;
         case "openSettings":
           await openClaudeSettingsFile();
           break;
@@ -83,7 +92,7 @@ class CcProviderViewProvider implements vscode.WebviewViewProvider {
     await this.context.globalState.update(CONFIGS_KEY, configs);
     await this.context.globalState.update(ACTIVE_PROVIDER_KEY, incoming.providerId);
     await this.saveTokenIfPresent(incoming.providerId, payload);
-    await this.postState(this.messages.configSaved);
+    await this.postState(this.messages.savedNotApplied);
   }
 
   private async applyConfig(payload: unknown): Promise<void> {
@@ -147,10 +156,23 @@ class CcProviderViewProvider implements vscode.WebviewViewProvider {
       throw new Error(this.messages.providerCannotDelete);
     }
     const configs = this.getConfigs();
+    const providerName = configs[providerId]?.displayName || providerId;
+    const confirmed = await vscode.window.showWarningMessage(
+      formatMessage(this.messages.confirmDelete, { name: providerName }),
+      { modal: true },
+      this.messages.confirmDeleteButton
+    );
+    if (confirmed !== this.messages.confirmDeleteButton) {
+      await this.postState();
+      return;
+    }
     delete configs[providerId];
     await this.context.secrets.delete(secretKey(providerId));
     await this.context.globalState.update(CONFIGS_KEY, configs);
     await this.context.globalState.update(ACTIVE_PROVIDER_KEY, PROVIDER_PRESETS[0].id);
+    if (this.context.globalState.get<string | undefined>(APPLIED_PROVIDER_KEY) === providerId) {
+      await this.context.globalState.update(APPLIED_PROVIDER_KEY, undefined);
+    }
     await this.postState(this.messages.providerDeleted);
   }
 
@@ -166,6 +188,18 @@ class CcProviderViewProvider implements vscode.WebviewViewProvider {
     await this.postState(this.messages.defaultSettingsRestored);
   }
 
+  private async revealToken(payload: unknown): Promise<void> {
+    const providerId = isRecord(payload) && typeof payload.providerId === "string" ? payload.providerId : undefined;
+    if (!providerId) {
+      throw new Error(this.messages.noProviderToDelete);
+    }
+    const token = await this.context.secrets.get(secretKey(providerId));
+    if (!token) {
+      throw new Error(this.messages.tokenUnsaved);
+    }
+    await this.postMessage({ type: "token", payload: { providerId, token } });
+  }
+
   private async postState(status?: string): Promise<void> {
     const configs = this.getConfigs();
     await this.context.globalState.update(CONFIGS_KEY, configs);
@@ -177,7 +211,7 @@ class CcProviderViewProvider implements vscode.WebviewViewProvider {
       )
     );
     const read = await readClaudeSettings(getClaudeSettingsPath());
-    const settingsPreview = read.settings ? JSON.stringify(read.settings, null, 2) : read.error ?? "";
+    const settingsPreview = read.settings ? JSON.stringify(redactSettingsForPreview(read.settings), null, 2) : read.error ?? "";
 
     await this.postMessage({
       type: "state",
