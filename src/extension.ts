@@ -117,7 +117,9 @@ class CcProviderViewProvider implements vscode.WebviewViewProvider {
     await this.context.globalState.update(APPLIED_PROVIDER_KEY, incoming.providerId);
     await this.postState(formatMessage(this.messages.appliedToPath, { path: getClaudeSettingsPath() }));
     void vscode.window.showInformationMessage(
-      result.backupPath ? this.messages.appliedConfigWithBackup : this.messages.appliedConfig
+      result.backupPath
+        ? formatMessage(this.messages.appliedConfigWithBackup, { path: result.backupPath })
+        : this.messages.appliedConfig
     );
   }
 

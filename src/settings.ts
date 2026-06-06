@@ -59,6 +59,7 @@ export async function writeClaudeSettings(input: ApplySettingsInput, settingsPat
   if (read.exists) {
     backupPath = `${settingsPath}.${timestamp()}.bak`;
     await fs.copyFile(settingsPath, backupPath);
+    await cleanupOldBackups(settingsPath, 3);
   }
 
   await fs.writeFile(settingsPath, `${JSON.stringify(result.settings, null, 2)}\n`, "utf8");
@@ -242,6 +243,19 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 function isNodeError(error: unknown): error is NodeJS.ErrnoException {
   return error instanceof Error && "code" in error;
+}
+
+async function cleanupOldBackups(settingsPath: string, keep: number): Promise<void> {
+  const dir = path.dirname(settingsPath);
+  const base = path.basename(settingsPath);
+  const entries = await fs.readdir(dir);
+  const bakFiles = entries
+    .filter((name) => name.startsWith(`${base}.`) && name.endsWith(".bak"))
+    .sort()
+    .reverse();
+  for (const file of bakFiles.slice(keep)) {
+    await fs.unlink(path.join(dir, file));
+  }
 }
 
 function timestamp(): string {
