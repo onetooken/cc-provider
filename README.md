@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="media/icon.png" alt="CC Provider logo" width="128" height="128">
+</p>
+
 # CC Provider
 
 CC Provider is a small VS Code extension for switching Claude Code provider settings without opening and editing JSON by hand. It is designed for people who move between Anthropic-compatible providers and want a fast, visible way to keep `~/.claude/settings.json` aligned with the provider they intend to use. It is especially useful for Claude Code users working in WSL2, SSH Remote, containers, or other remote VS Code environments where there is no local GUI for managing provider settings.

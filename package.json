@@ -6,6 +6,10 @@
   "publisher": "onetoken",
   "license": "MIT",
   "icon": "media/icon.png",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/onetooken/cc-provider.git"
+  },
   "engines": {
     "vscode": "^1.90.0"
   },
