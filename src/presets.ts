@@ -30,8 +30,9 @@ export const PROVIDER_PRESETS: ProviderPreset[] = [
     baseUrl: "https://open.bigmodel.cn/api/anthropic",
     models: {
       opus: "glm-5.1",
-      sonnet: "glm-4.7",
-      haiku: "glm-4.5-air"
+      sonnet: "glm-5.1",
+      haiku: "glm-5.1",
+      subagent: "glm-5.1"
     },
     defaultEnv: {
       API_TIMEOUT_MS: "3000000",
@@ -53,8 +54,8 @@ export const PROVIDER_PRESETS: ProviderPreset[] = [
       model: "mimo-v2.5-pro[1m]",
       opus: "mimo-v2.5-pro[1m]",
       sonnet: "mimo-v2.5-pro[1m]",
-      haiku: "mimo-v2.5[1m]",
-      subagent: "mimo-v2.5[1m]"
+      haiku: "mimo-v2.5-pro[1m]",
+      subagent: "mimo-v2.5-pro[1m]"
     },
     defaultEnv: {},
     capabilities: {

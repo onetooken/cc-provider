@@ -293,12 +293,22 @@ function migrateBuiltinConfig(config: EditableProviderConfig): EditableProviderC
       })
     };
   }
+  if (config.providerId === "zhipu") {
+    return {
+      ...sanitized,
+      models: replaceModelDefaults(sanitized.models, {
+        "glm-4.7": "glm-5.1",
+        "glm-4.5-air": "glm-5.1"
+      })
+    };
+  }
   if (config.providerId === "mimo") {
     return {
       ...sanitized,
       models: replaceModelDefaults(sanitized.models, {
         "mimo-v2.5-pro": "mimo-v2.5-pro[1m]",
-        "mimo-v2.5": "mimo-v2.5[1m]"
+        "mimo-v2.5": "mimo-v2.5-pro[1m]",
+        "mimo-v2.5[1m]": "mimo-v2.5-pro[1m]"
       })
     };
   }

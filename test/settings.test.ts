@@ -30,8 +30,9 @@ describe("provider presets", () => {
     expect(env).toMatchObject({
       ANTHROPIC_BASE_URL: "https://open.bigmodel.cn/api/anthropic",
       ANTHROPIC_DEFAULT_OPUS_MODEL: "glm-5.1",
-      ANTHROPIC_DEFAULT_SONNET_MODEL: "glm-4.7",
-      ANTHROPIC_DEFAULT_HAIKU_MODEL: "glm-4.5-air",
+      ANTHROPIC_DEFAULT_SONNET_MODEL: "glm-5.1",
+      ANTHROPIC_DEFAULT_HAIKU_MODEL: "glm-5.1",
+      CLAUDE_CODE_SUBAGENT_MODEL: "glm-5.1",
       ANTHROPIC_AUTH_TOKEN: "sk-zhipu",
       API_TIMEOUT_MS: "3000000",
       CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC: "1"
@@ -49,8 +50,8 @@ describe("provider presets", () => {
       ANTHROPIC_MODEL: "mimo-v2.5-pro[1m]",
       ANTHROPIC_DEFAULT_OPUS_MODEL: "mimo-v2.5-pro[1m]",
       ANTHROPIC_DEFAULT_SONNET_MODEL: "mimo-v2.5-pro[1m]",
-      ANTHROPIC_DEFAULT_HAIKU_MODEL: "mimo-v2.5[1m]",
-      CLAUDE_CODE_SUBAGENT_MODEL: "mimo-v2.5[1m]"
+      ANTHROPIC_DEFAULT_HAIKU_MODEL: "mimo-v2.5-pro[1m]",
+      CLAUDE_CODE_SUBAGENT_MODEL: "mimo-v2.5-pro[1m]"
     });
   });
 });
