@@ -1,7 +1,25 @@
 import { describe, expect, it } from "vitest";
-import { migrateBuiltinModels } from "../src/presets";
+import { getPreset, migrateBuiltinModels } from "../src/presets";
 
 describe("builtin preset migrations", () => {
+  it("declares usage capabilities for built-in providers", () => {
+    expect(getPreset("deepseek")?.usage).toEqual({
+      kind: "query",
+      adapter: "deepseekBalance",
+      consoleUrl: "https://platform.deepseek.com/usage"
+    });
+    expect(getPreset("zhipu")?.usage).toEqual({
+      kind: "query",
+      adapter: "zhipuCodingPlan",
+      experimental: true,
+      consoleUrl: "https://bigmodel.cn/coding-plan/personal/usage"
+    });
+    expect(getPreset("mimo")?.usage).toEqual({
+      kind: "externalLink",
+      url: "https://platform.xiaomimimo.com/console/plan-manage"
+    });
+  });
+
   it("migrates complete legacy model defaults to current defaults", () => {
     expect(
       migrateBuiltinModels("zhipu", {

@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.0.5
+
+- Added manual usage queries for DeepSeek balance and experimental Zhipu GLM Coding Plan usage.
+- Added a DeepSeek platform usage link from the usage card.
+- Added a Zhipu GLM Coding Plan usage link from the usage card.
+- Added a Xiaomi MiMo usage console link and an unsupported usage state for custom providers.
+- Added custom provider usage configuration for opening a user-defined usage link.
+- Kept usage API tokens inside the extension host by querying from VS Code SecretStorage.
+
 ## 0.0.4
 
 - Added config schema version tracking so legacy provider migrations run only once.

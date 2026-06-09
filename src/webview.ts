@@ -306,6 +306,64 @@ export function getWebviewHtml(webview: vscode.Webview, locale: AppLocale, messa
     .status.dirty {
       color: var(--vscode-notificationsWarningIcon-foreground);
     }
+    .usage-actions {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+      justify-content: flex-end;
+      flex-wrap: wrap;
+    }
+    .usage-actions button {
+      min-height: 26px;
+      padding: 4px 8px;
+      font-size: 12px;
+    }
+    .usage-header {
+      display: grid;
+      gap: 2px;
+      min-width: 0;
+    }
+    .usage-status {
+      color: var(--vscode-descriptionForeground);
+      font-size: 12px;
+      line-height: 1.4;
+    }
+    .usage-status.error {
+      color: var(--vscode-errorForeground);
+    }
+    .usage-status.warning {
+      color: var(--vscode-notificationsWarningIcon-foreground);
+    }
+    .usage-metrics {
+      display: grid;
+      gap: 6px;
+    }
+    .usage-metric {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 8px;
+      align-items: baseline;
+      border: 1px solid var(--vscode-panel-border);
+      border-radius: 4px;
+      padding: 6px 8px;
+      background: var(--vscode-input-background);
+    }
+    .usage-metric-label {
+      min-width: 0;
+      overflow-wrap: anywhere;
+      color: var(--vscode-descriptionForeground);
+      font-size: 12px;
+    }
+    .usage-metric-value {
+      font-weight: 600;
+      white-space: nowrap;
+    }
+    .usage-metric-detail {
+      grid-column: 1 / -1;
+      color: var(--vscode-descriptionForeground);
+      font-size: 11px;
+      overflow-wrap: anywhere;
+    }
     .muted {
       color: var(--vscode-descriptionForeground);
     }
@@ -364,7 +422,7 @@ export function getWebviewHtml(webview: vscode.Webview, locale: AppLocale, messa
         <label>
           <span>${escapeHtml(messages.apiToken)}</span>
           <span class="token-input">
-            <input id="authToken" type="password" autocomplete="off" placeholder="${escapeHtml(messages.tokenPlaceholder)}">
+            <input id="authToken" type="password" autocomplete="off">
             <button class="token-toggle" id="toggleToken" title="${escapeHtml(messages.apiToken)}" type="button">${escapeHtml(messages.tokenShow)}</button>
           </span>
         </label>
@@ -439,12 +497,27 @@ export function getWebviewHtml(webview: vscode.Webview, locale: AppLocale, messa
           <pre id="preview"></pre>
         </div>
       </details>
-      <div class="muted tiny">${escapeHtml(messages.tokenSecureHint)}</div>
+      <div id="customUsageConfig">
+        <label>
+          <span>${escapeHtml(messages.usageLink)}</span>
+          <input id="usageLink" autocomplete="off" placeholder="${escapeHtml(messages.usageLinkPlaceholder)}">
+        </label>
+      </div>
     </section>
 
     <section class="card">
-      <h2>${escapeHtml(messages.quota)}</h2>
-      <div class="muted tiny">${escapeHtml(messages.quotaPlaceholder)}</div>
+      <div class="header-row">
+        <span class="usage-header">
+          <h2>${escapeHtml(messages.quota)}</h2>
+          <span class="muted tiny" id="usageHint"></span>
+        </span>
+        <span class="usage-actions">
+          <button id="openUsageConsole" type="button">${escapeHtml(messages.usageOpenConsole)}</button>
+          <button id="refreshUsage" type="button">${escapeHtml(messages.usageRefresh)}</button>
+        </span>
+      </div>
+      <div class="usage-status" id="usageStatus"></div>
+      <div class="usage-metrics" id="usageMetrics"></div>
     </section>
 
     <section class="card action-card">
@@ -471,6 +544,7 @@ export function getWebviewHtml(webview: vscode.Webview, locale: AppLocale, messa
     let baseline = "";
     let isRendering = false;
     let tokenVisible = false;
+    let usageLoadingProvider = "";
 
     const ids = [
       "displayName",
@@ -486,12 +560,18 @@ export function getWebviewHtml(webview: vscode.Webview, locale: AppLocale, messa
       "disableClaudeAttribution",
       "disableNonessentialTraffic",
       "permissionDefaultMode",
-      "enableAutoTheme"
+      "enableAutoTheme",
+      "usageLink"
     ];
     const el = Object.fromEntries(ids.map((id) => [id, document.getElementById(id)]));
     const providerList = document.getElementById("providerList");
     const envRows = document.getElementById("envRows");
     const statusEl = document.getElementById("status");
+    const usageStatusEl = document.getElementById("usageStatus");
+    const usageMetricsEl = document.getElementById("usageMetrics");
+    const usageHintEl = document.getElementById("usageHint");
+    const refreshUsageButton = document.getElementById("refreshUsage");
+    const openUsageConsoleButton = document.getElementById("openUsageConsole");
 
     window.addEventListener("message", (event) => {
       const message = event.data;
@@ -502,6 +582,10 @@ export function getWebviewHtml(webview: vscode.Webview, locale: AppLocale, messa
       }
       if (message.type === "error") {
         setStatus(message.payload || "", false);
+        if (usageLoadingProvider) {
+          usageLoadingProvider = "";
+          renderUsage();
+        }
       }
       if (message.type === "token" && message.payload?.providerId === activeProvider) {
         el.authToken.value = message.payload.token || "";
@@ -511,6 +595,18 @@ export function getWebviewHtml(webview: vscode.Webview, locale: AppLocale, messa
         baseline = serializeConfig(collectConfig());
         updateDirty();
       }
+      if (message.type === "usage" && message.payload?.providerId) {
+        state.usageSnapshots = {
+          ...(state.usageSnapshots || {}),
+          [message.payload.providerId]: message.payload
+        };
+        if (usageLoadingProvider === message.payload.providerId) {
+          usageLoadingProvider = "";
+        }
+        if (message.payload.providerId === activeProvider) {
+          renderUsage();
+        }
+      }
     });
 
     document.getElementById("save").addEventListener("click", () => post("saveConfig", collectConfig()));
@@ -519,6 +615,17 @@ export function getWebviewHtml(webview: vscode.Webview, locale: AppLocale, messa
     document.getElementById("deleteProvider").addEventListener("click", () => post("deleteProvider", { providerId: activeProvider }));
     document.getElementById("reset").addEventListener("click", () => post("resetProvider", { providerId: activeProvider }));
     document.getElementById("openSettings").addEventListener("click", () => post("openSettings", {}));
+    refreshUsageButton.addEventListener("click", () => {
+      usageLoadingProvider = activeProvider;
+      renderUsage();
+      post("refreshUsage", { providerId: activeProvider });
+    });
+    openUsageConsoleButton.addEventListener("click", () => {
+      const url = currentUsageExternalUrl();
+      if (url) {
+        post("openExternal", { url });
+      }
+    });
     document.getElementById("addEnv").addEventListener("click", () => {
       addEnvRow("", "");
       updateDirty();
@@ -540,6 +647,7 @@ export function getWebviewHtml(webview: vscode.Webview, locale: AppLocale, messa
       el[item].addEventListener("input", updateDirty);
       el[item].addEventListener("change", updateDirty);
     }
+    el.usageLink.addEventListener("input", renderUsage);
 
     post("ready", {});
 
@@ -556,7 +664,7 @@ export function getWebviewHtml(webview: vscode.Webview, locale: AppLocale, messa
       el.displayName.value = config.displayName || provider.name || "";
       el.baseUrl.value = config.baseUrl || "";
       el.authToken.value = "";
-      el.authToken.placeholder = tokenSaved ? savedTokenMask : messages.tokenPlaceholder;
+      el.authToken.placeholder = tokenSaved ? savedTokenMask : "";
       tokenVisible = false;
       el.authToken.type = "password";
       syncTokenToggle();
@@ -571,12 +679,202 @@ export function getWebviewHtml(webview: vscode.Webview, locale: AppLocale, messa
       el.disableNonessentialTraffic.checked = config.disableNonessentialTraffic !== false;
       el.permissionDefaultMode.value = permissionDefaultModeFromConfig(config);
       el.enableAutoTheme.checked = config.enableAutoTheme !== false;
+      renderUsageConfig();
       renderEnvRows(config.customEnv || {});
       document.getElementById("settingsPath").textContent = state.settingsPath || "";
       document.getElementById("preview").textContent = state.settingsError || state.settingsPreview || "{}";
+      renderUsage();
       baseline = serializeConfig(collectConfig());
       setStatus(state.status || "", false);
       isRendering = false;
+    }
+
+    function renderUsage() {
+      const capability = currentUsageCapability();
+      const snapshot = state.usageSnapshots?.[activeProvider];
+      const loading = usageLoadingProvider === activeProvider;
+      const externalUrl = currentUsageExternalUrl();
+      const canQuery = capability.kind === "query";
+
+      refreshUsageButton.hidden = !canQuery;
+      refreshUsageButton.disabled = loading || !canQuery;
+      refreshUsageButton.textContent = loading ? messages.usageLoading : messages.usageRefresh;
+      openUsageConsoleButton.hidden = !externalUrl;
+      usageHintEl.textContent = capability.experimental ? messages.usageExperimental : "";
+      usageMetricsEl.innerHTML = "";
+
+      if (loading) {
+        setUsageStatus(messages.usageLoading, "");
+        return;
+      }
+
+      if (snapshot) {
+        renderUsageSnapshot(snapshot, capability);
+        return;
+      }
+
+      if (capability.kind === "externalLink") {
+        setUsageStatus(messages.usageExternal, "warning");
+        return;
+      }
+      if (capability.kind === "unsupported") {
+        setUsageStatus(capability.reason || messages.usageUnsupported, "warning");
+        return;
+      }
+
+      setUsageStatus(messages.usageNotFetched, "");
+    }
+
+    function renderUsageConfig() {
+      const provider = currentProvider();
+      const config = currentConfig();
+      const customUsageConfig = document.getElementById("customUsageConfig");
+      customUsageConfig.hidden = Boolean(provider.isBuiltin);
+
+      const usage = config.usage || { kind: "unsupported" };
+      el.usageLink.value = usage.kind === "externalLink" ? usage.url || "" : "";
+    }
+
+    function renderUsageSnapshot(snapshot, capability) {
+      setUsageStatus(usageStatusMessage(snapshot, capability), usageStatusClass(snapshot.status));
+      const metrics = Array.isArray(snapshot.metrics) ? snapshot.metrics : [];
+      if (metrics.length === 0 && snapshot.status === "available") {
+        setUsageStatus(messages.usageNoMetrics, "warning");
+      }
+      for (const metric of metrics) {
+        const row = document.createElement("div");
+        row.className = "usage-metric";
+        const label = document.createElement("span");
+        label.className = "usage-metric-label";
+        label.textContent = localizedUsageMetricLabel(metric.label || "");
+        const value = document.createElement("span");
+        value.className = "usage-metric-value";
+        value.textContent = localizedUsageMetricValue(metric.value || "");
+        row.appendChild(label);
+        row.appendChild(value);
+        if (metric.detail) {
+          const detail = document.createElement("span");
+          detail.className = "usage-metric-detail";
+          detail.textContent = localizedUsageMetricDetail(metric.detail);
+          row.appendChild(detail);
+        }
+        usageMetricsEl.appendChild(row);
+      }
+    }
+
+    function usageStatusMessage(snapshot, capability) {
+      if (snapshot.status === "available") {
+        return snapshot.fetchedAt
+          ? messages.usageLastFetched.replace("{time}", formatUsageTime(snapshot.fetchedAt))
+          : snapshot.message || "";
+      }
+      if (snapshot.status === "missingToken") {
+        return messages.usageMissingToken;
+      }
+      if (snapshot.status === "unsupported") {
+        return snapshot.message || capability.reason || messages.usageUnsupported;
+      }
+      if (snapshot.status === "externalLink") {
+        return snapshot.message || messages.usageExternal;
+      }
+      if (snapshot.status === "error") {
+        return snapshot.message ? messages.usageQueryFailed + ": " + snapshot.message : messages.usageQueryFailed;
+      }
+      return snapshot.message || "";
+    }
+
+    function localizedUsageMetricLabel(label) {
+      if (label === "API available") {
+        return messages.usageMetricApiAvailable;
+      }
+      if (label === "Token usage (5h)") {
+        return messages.usageMetricTokenUsage;
+      }
+      if (label === "MCP usage (1 month)") {
+        return messages.usageMetricMcpUsage;
+      }
+
+      const currencyMatch = label.match(/^(.+) (total|granted|topped up)$/);
+      if (!currencyMatch) {
+        return label;
+      }
+      const currency = currencyMatch[1];
+      const kind = currencyMatch[2];
+      if (kind === "total") {
+        return messages.usageMetricCurrencyTotal.replace("{currency}", currency);
+      }
+      if (kind === "granted") {
+        return messages.usageMetricCurrencyGranted.replace("{currency}", currency);
+      }
+      return messages.usageMetricCurrencyToppedUp.replace("{currency}", currency);
+    }
+
+    function localizedUsageMetricValue(value) {
+      if (value === "Yes") {
+        return messages.usageValueYes;
+      }
+      if (value === "No") {
+        return messages.usageValueNo;
+      }
+      return value;
+    }
+
+    function localizedUsageMetricDetail(detail) {
+      const match = detail.match(/^current: (.*), limit: (.*)$/);
+      if (!match) {
+        return detail;
+      }
+      return messages.usageMetricCurrentLimit
+        .replace("{current}", match[1])
+        .replace("{limit}", match[2]);
+    }
+
+    function usageStatusClass(status) {
+      if (status === "error") {
+        return "error";
+      }
+      if (["missingToken", "unsupported", "externalLink"].includes(status)) {
+        return "warning";
+      }
+      return "";
+    }
+
+    function setUsageStatus(text, kind) {
+      usageStatusEl.textContent = text || "";
+      usageStatusEl.className = "usage-status" + (kind ? " " + kind : "");
+    }
+
+    function currentUsageCapability() {
+      const preset = currentPreset();
+      if (preset) {
+        return preset.usage;
+      }
+      const config = currentConfig();
+      return collectUsageConfig();
+    }
+
+    function currentUsageExternalUrl() {
+      const snapshot = state.usageSnapshots?.[activeProvider];
+      if (snapshot?.externalUrl) {
+        return snapshot.externalUrl;
+      }
+      const capability = currentUsageCapability();
+      if (capability.kind === "externalLink") {
+        return capability.url;
+      }
+      return capability.kind === "query" ? capability.consoleUrl || "" : "";
+    }
+
+    function currentPreset() {
+      return (state.presets || []).find((preset) => preset.id === activeProvider);
+    }
+
+    function formatUsageTime(value) {
+      const date = new Date(value);
+      if (Number.isNaN(date.getTime())) {
+        return value;
+      }
+      return date.toLocaleString(undefined, { hour12: false });
     }
 
     function renderProviders() {
@@ -658,8 +956,23 @@ export function getWebviewHtml(webview: vscode.Webview, locale: AppLocale, messa
         disableClaudeAttribution: el.disableClaudeAttribution.checked,
         disableNonessentialTraffic: el.disableNonessentialTraffic.checked,
         permissionDefaultMode: el.permissionDefaultMode.value,
-        enableAutoTheme: el.enableAutoTheme.checked
+        enableAutoTheme: el.enableAutoTheme.checked,
+        usage: collectUsageConfig()
       };
+    }
+
+    function collectUsageConfig() {
+      const url = el.usageLink.value.trim();
+      return isHttpUrl(url) ? { kind: "externalLink", url } : { kind: "unsupported" };
+    }
+
+    function isHttpUrl(value) {
+      try {
+        const url = new URL(value);
+        return (url.protocol === "https:" || url.protocol === "http:") && Boolean(url.host);
+      } catch {
+        return false;
+      }
     }
 
     function permissionDefaultModeFromConfig(config) {

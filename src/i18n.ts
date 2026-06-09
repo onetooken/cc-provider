@@ -46,6 +46,28 @@ export interface AppMessages {
   providerTitle: string;
   quota: string;
   quotaPlaceholder: string;
+  usageExperimental: string;
+  usageExternal: string;
+  usageLastFetched: string;
+  usageLoading: string;
+  usageMetricApiAvailable: string;
+  usageMetricCurrentLimit: string;
+  usageMetricCurrencyGranted: string;
+  usageMetricCurrencyToppedUp: string;
+  usageMetricCurrencyTotal: string;
+  usageMetricMcpUsage: string;
+  usageMetricTokenUsage: string;
+  usageMissingToken: string;
+  usageNoMetrics: string;
+  usageNotFetched: string;
+  usageOpenConsole: string;
+  usageQueryFailed: string;
+  usageRefresh: string;
+  usageLink: string;
+  usageLinkPlaceholder: string;
+  usageUnsupported: string;
+  usageValueNo: string;
+  usageValueYes: string;
   requiredField: string;
   reset: string;
   save: string;
@@ -54,11 +76,9 @@ export interface AppMessages {
   settingsPreview: string;
   themeAuto: string;
   tokenSaved: string;
-  tokenSecureHint: string;
   tokenShow: string;
   tokenHide: string;
   tokenUnsaved: string;
-  tokenPlaceholder: string;
   unsavedChanges: string;
 }
 
@@ -108,6 +128,28 @@ const EN: AppMessages = {
   providerTitle: "Current Provider",
   quota: "Usage",
   quotaPlaceholder: "This version does not support querying provider API usage.",
+  usageExperimental: "Experimental",
+  usageExternal: "Open the provider console to view usage.",
+  usageLastFetched: "Last refreshed: {time}",
+  usageLoading: "Refreshing...",
+  usageMetricApiAvailable: "API available",
+  usageMetricCurrentLimit: "current: {current}, limit: {limit}",
+  usageMetricCurrencyGranted: "{currency} granted",
+  usageMetricCurrencyToppedUp: "{currency} topped up",
+  usageMetricCurrencyTotal: "{currency} total",
+  usageMetricMcpUsage: "MCP usage (1 month)",
+  usageMetricTokenUsage: "Token usage (5h)",
+  usageMissingToken: "Save an API Token before querying usage.",
+  usageNoMetrics: "No usage metrics returned.",
+  usageNotFetched: "Click refresh to query provider usage.",
+  usageOpenConsole: "Open console",
+  usageQueryFailed: "Usage query failed",
+  usageRefresh: "Refresh",
+  usageLink: "Usage link",
+  usageLinkPlaceholder: "Enter an http/https link",
+  usageUnsupported: "This provider does not support usage query yet.",
+  usageValueNo: "No",
+  usageValueYes: "Yes",
   requiredField: "{field} is required.",
   reset: "Restore defaults",
   save: "Save only",
@@ -116,11 +158,9 @@ const EN: AppMessages = {
   settingsPreview: "Current settings.json",
   themeAuto: "Use auto theme",
   tokenSaved: "Token saved",
-  tokenSecureHint: "API Token will be stored securely. Preview and export are automatically redacted.",
   tokenShow: "Show",
   tokenHide: "Hide",
   tokenUnsaved: "Token not saved",
-  tokenPlaceholder: "Leave empty to keep the saved token",
   unsavedChanges: "Unsaved changes. Save or apply to take effect."
 };
 
@@ -170,6 +210,28 @@ const ZH_CN: AppMessages = {
   providerTitle: "当前 Provider",
   quota: "用量",
   quotaPlaceholder: "当前版本暂不支持查询厂商 API 用量。",
+  usageExperimental: "实验性",
+  usageExternal: "请打开厂商控制台查看用量。",
+  usageLastFetched: "最近刷新：{time}",
+  usageLoading: "刷新中...",
+  usageMetricApiAvailable: "API 可用",
+  usageMetricCurrentLimit: "当前：{current}，上限：{limit}",
+  usageMetricCurrencyGranted: "{currency} 剩余赠金",
+  usageMetricCurrencyToppedUp: "{currency} 剩余充值余额",
+  usageMetricCurrencyTotal: "{currency} 剩余总余额",
+  usageMetricMcpUsage: "MCP 用量（1 个月）",
+  usageMetricTokenUsage: "Token 用量（5 小时）",
+  usageMissingToken: "请先保存 API Token，再查询用量。",
+  usageNoMetrics: "厂商未返回可展示的用量指标。",
+  usageNotFetched: "点击刷新查询厂商用量。",
+  usageOpenConsole: "打开控制台",
+  usageQueryFailed: "用量查询失败",
+  usageRefresh: "刷新",
+  usageLink: "用量链接",
+  usageLinkPlaceholder: "请输入 http/https 链接",
+  usageUnsupported: "当前 Provider 暂不支持用量查询。",
+  usageValueNo: "否",
+  usageValueYes: "是",
   requiredField: "{field} 不能为空。",
   reset: "恢复默认",
   save: "仅保存",
@@ -178,11 +240,9 @@ const ZH_CN: AppMessages = {
   settingsPreview: "当前 settings.json",
   themeAuto: "主题跟随 auto",
   tokenSaved: "Token 已保存",
-  tokenSecureHint: "API Token 将被安全保存，预览与导出时已自动脱敏。",
   tokenShow: "显示",
   tokenHide: "隐藏",
   tokenUnsaved: "Token 未保存",
-  tokenPlaceholder: "留空则使用已保存 Token",
   unsavedChanges: "有未保存更改，保存或应用后才会生效。"
 };
 

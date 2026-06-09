@@ -1,5 +1,14 @@
 export type ProviderId = "deepseek" | "zhipu" | "mimo" | string;
 export type PermissionDefaultMode = "none" | "auto" | "bypassPermissions";
+export type UsageAdapterId = "deepseekBalance" | "zhipuCodingPlan";
+
+export type UsageCapability =
+  | { kind: "query"; adapter: UsageAdapterId; experimental?: boolean; consoleUrl?: string }
+  | { kind: "externalLink"; url: string }
+  | { kind: "unsupported"; reason?: string };
+export type CustomUsageCapability = Extract<UsageCapability, { kind: "externalLink" | "unsupported" }>;
+
+export type UsageSnapshotStatus = "available" | "externalLink" | "missingToken" | "unsupported" | "error";
 
 export interface ModelSlots {
   model?: string;
@@ -23,7 +32,29 @@ export interface ProviderPreset {
   defaultEnv: Record<string, string>;
   capabilities: ProviderCapabilities;
   modelOptions?: string[];
-  usageStatus: "placeholder" | "available";
+  usage: UsageCapability;
+}
+
+export interface UsageMetric {
+  label: string;
+  value: string;
+  detail?: string;
+}
+
+export interface UsageDetail {
+  title: string;
+  data: unknown;
+}
+
+export interface UsageSnapshot {
+  providerId: ProviderId;
+  status: UsageSnapshotStatus;
+  fetchedAt?: string;
+  metrics: UsageMetric[];
+  message?: string;
+  externalUrl?: string;
+  experimental?: boolean;
+  details?: UsageDetail[];
 }
 
 export interface EditableProviderConfig {
@@ -38,6 +69,7 @@ export interface EditableProviderConfig {
   disableNonessentialTraffic: boolean;
   permissionDefaultMode: PermissionDefaultMode;
   enableAutoTheme: boolean;
+  usage?: CustomUsageCapability;
 }
 
 export interface ApplySettingsInput {

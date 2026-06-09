@@ -8,9 +8,10 @@ import {
   redactSettingsForPreview,
   writeClaudeSettings
 } from "./settings";
-import { EditableProviderConfig, PermissionDefaultMode } from "./types";
+import { CustomUsageCapability, EditableProviderConfig, PermissionDefaultMode, UsageSnapshot } from "./types";
 import { getWebviewHtml } from "./webview";
 import { AppMessages, formatMessage, getLocale, getMessages } from "./i18n";
+import { fetchProviderUsage } from "./usage";
 
 const CONFIGS_KEY = "ccProvider.configs";
 const CONFIG_SCHEMA_VERSION_KEY = "ccProvider.configSchemaVersion";
@@ -38,6 +39,7 @@ export function deactivate(): void {
 
 class CcProviderViewProvider implements vscode.WebviewViewProvider {
   private view?: vscode.WebviewView;
+  private readonly usageSnapshots = new Map<string, UsageSnapshot>();
   private readonly locale = getLocale(vscode.env.language);
   private readonly messages = getMessages(this.locale);
 
@@ -75,6 +77,12 @@ class CcProviderViewProvider implements vscode.WebviewViewProvider {
           break;
         case "revealToken":
           await this.revealToken(message.payload);
+          break;
+        case "refreshUsage":
+          await this.refreshUsage(message.payload);
+          break;
+        case "openExternal":
+          await this.openExternal(message.payload);
           break;
         case "openSettings":
           await openClaudeSettingsFile();
@@ -144,7 +152,8 @@ class CcProviderViewProvider implements vscode.WebviewViewProvider {
       disableClaudeAttribution: true,
       disableNonessentialTraffic: true,
       permissionDefaultMode: "none",
-      enableAutoTheme: true
+      enableAutoTheme: true,
+      usage: { kind: "unsupported" }
     };
     await this.context.globalState.update(CONFIGS_KEY, configs);
     await this.context.globalState.update(ACTIVE_PROVIDER_KEY, id);
@@ -204,6 +213,43 @@ class CcProviderViewProvider implements vscode.WebviewViewProvider {
     await this.postMessage({ type: "token", payload: { providerId, token } });
   }
 
+  private async refreshUsage(payload: unknown): Promise<void> {
+    const providerId = isRecord(payload) && typeof payload.providerId === "string" ? payload.providerId : undefined;
+    if (!providerId) {
+      throw new Error(this.messages.noProviderToDelete);
+    }
+
+    const configs = await this.getConfigs();
+    const config = configs[providerId];
+    if (!config) {
+      throw new Error(this.messages.noProviderToDelete);
+    }
+
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 15000);
+    try {
+      const snapshot = await fetchProviderUsage(config, getPreset(providerId), await this.context.secrets.get(secretKey(providerId)), new Date(), {
+        signal: controller.signal
+      });
+      this.usageSnapshots.set(providerId, snapshot);
+      await this.postMessage({ type: "usage", payload: snapshot });
+    } finally {
+      clearTimeout(timeout);
+    }
+  }
+
+  private async openExternal(payload: unknown): Promise<void> {
+    const url = isRecord(payload) && typeof payload.url === "string" ? payload.url : undefined;
+    if (!url) {
+      return;
+    }
+    const uri = vscode.Uri.parse(url, true);
+    if (uri.scheme !== "https" && uri.scheme !== "http") {
+      return;
+    }
+    await vscode.env.openExternal(uri);
+  }
+
   private async postState(status?: string): Promise<void> {
     const configs = await this.getConfigs();
     await this.context.globalState.update(CONFIGS_KEY, configs);
@@ -228,6 +274,7 @@ class CcProviderViewProvider implements vscode.WebviewViewProvider {
         activeProvider,
         appliedProvider,
         tokenStatus,
+        usageSnapshots: Object.fromEntries(this.usageSnapshots),
         settingsPath: getClaudeSettingsPath(),
         settingsError: read.error,
         settingsPreview,
@@ -324,7 +371,8 @@ function parseConfigPayload(payload: unknown, messages: AppMessages): EditablePr
     disableClaudeAttribution: payload.disableClaudeAttribution !== false,
     disableNonessentialTraffic: payload.disableNonessentialTraffic !== false,
     permissionDefaultMode: normalizePermissionDefaultMode(payload.permissionDefaultMode, payload.enableAutoMode),
-    enableAutoTheme: payload.enableAutoTheme !== false
+    enableAutoTheme: payload.enableAutoTheme !== false,
+    usage: normalizeCustomUsage(payload.usage)
   };
 }
 
@@ -348,7 +396,8 @@ function sanitizeConfig(config: EditableProviderConfig): EditableProviderConfig 
     disableClaudeAttribution: config.disableClaudeAttribution !== false,
     disableNonessentialTraffic: config.disableNonessentialTraffic !== false,
     permissionDefaultMode: normalizePermissionDefaultMode(config.permissionDefaultMode, legacyConfig.enableAutoMode),
-    enableAutoTheme: config.enableAutoTheme !== false
+    enableAutoTheme: config.enableAutoTheme !== false,
+    usage: normalizeCustomUsage(config.usage)
   };
 }
 
@@ -361,6 +410,26 @@ function normalizePermissionDefaultMode(value: unknown, legacyEnableAutoMode?: u
 
 function removeManagedCustomEnv(customEnv: Record<string, string>): Record<string, string> {
   return Object.fromEntries(Object.entries(customEnv).filter(([key]) => !CORE_MANAGED_ENV_KEYS.includes(key)));
+}
+
+function normalizeCustomUsage(value: unknown): CustomUsageCapability {
+  if (!isRecord(value) || value.kind !== "externalLink") {
+    return { kind: "unsupported" };
+  }
+  const url = typeof value.url === "string" ? value.url.trim() : "";
+  if (!isHttpUrl(url)) {
+    return { kind: "unsupported" };
+  }
+  return { kind: "externalLink", url };
+}
+
+function isHttpUrl(value: string): boolean {
+  try {
+    const uri = vscode.Uri.parse(value, true);
+    return (uri.scheme === "https" || uri.scheme === "http") && Boolean(uri.authority);
+  } catch {
+    return false;
+  }
 }
 
 function requiredString(value: unknown, field: string, messages: AppMessages): string {

@@ -23,7 +23,7 @@ export const PROVIDER_PRESETS: ProviderPreset[] = [
       supportsMaxEffort: true
     },
     modelOptions: ["deepseek-v4-pro", "deepseek-v4-flash"],
-    usageStatus: "placeholder"
+    usage: { kind: "query", adapter: "deepseekBalance", consoleUrl: "https://platform.deepseek.com/usage" }
   },
   {
     id: "zhipu",
@@ -45,7 +45,12 @@ export const PROVIDER_PRESETS: ProviderPreset[] = [
       supportsMaxEffort: false
     },
     modelOptions: ["glm-5.1", "glm-4.7", "glm-4.5-air"],
-    usageStatus: "placeholder"
+    usage: {
+      kind: "query",
+      adapter: "zhipuCodingPlan",
+      experimental: true,
+      consoleUrl: "https://bigmodel.cn/coding-plan/personal/usage"
+    }
   },
   {
     id: "mimo",
@@ -65,7 +70,7 @@ export const PROVIDER_PRESETS: ProviderPreset[] = [
       supportsMaxEffort: false
     },
     modelOptions: ["mimo-v2.5-pro", "mimo-v2.5"],
-    usageStatus: "placeholder"
+    usage: { kind: "externalLink", url: "https://platform.xiaomimimo.com/console/plan-manage" }
   }
 ];
 

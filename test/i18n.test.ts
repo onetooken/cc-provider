@@ -14,4 +14,12 @@ describe("i18n locale selection", () => {
     expect(getMessages("en").apply).toBe("Apply");
     expect(getMessages("zh-cn").apply).toBe("应用");
   });
+
+  it("returns localized usage labels", () => {
+    expect(getMessages("en").usageMetricCurrencyTotal).toBe("{currency} total");
+    expect(getMessages("zh-cn").usageMetricCurrencyTotal).toBe("{currency} 剩余总余额");
+    expect(getMessages("zh-cn").usageMetricApiAvailable).toBe("API 可用");
+    expect(getMessages("zh-cn").usageValueYes).toBe("是");
+    expect(getMessages("zh-cn").usageLink).toBe("用量链接");
+  });
 });
