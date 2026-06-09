@@ -8,7 +8,7 @@ import {
   redactSettingsForPreview,
   writeClaudeSettings
 } from "./settings";
-import { EditableProviderConfig } from "./types";
+import { EditableProviderConfig, PermissionDefaultMode } from "./types";
 import { getWebviewHtml } from "./webview";
 import { AppMessages, formatMessage, getLocale, getMessages } from "./i18n";
 
@@ -141,7 +141,7 @@ class CcProviderViewProvider implements vscode.WebviewViewProvider {
       maxEffort: false,
       disableClaudeAttribution: true,
       disableNonessentialTraffic: true,
-      enableAutoMode: true,
+      permissionDefaultMode: "none",
       enableAutoTheme: true
     };
     await this.context.globalState.update(CONFIGS_KEY, configs);
@@ -315,7 +315,7 @@ function parseConfigPayload(payload: unknown, messages: AppMessages): EditablePr
     maxEffort: Boolean(payload.maxEffort),
     disableClaudeAttribution: payload.disableClaudeAttribution !== false,
     disableNonessentialTraffic: payload.disableNonessentialTraffic !== false,
-    enableAutoMode: payload.enableAutoMode !== false,
+    permissionDefaultMode: normalizePermissionDefaultMode(payload.permissionDefaultMode, payload.enableAutoMode),
     enableAutoTheme: payload.enableAutoTheme !== false
   };
 }
@@ -357,14 +357,22 @@ function migrateBuiltinConfig(config: EditableProviderConfig): EditableProviderC
 }
 
 function sanitizeConfig(config: EditableProviderConfig): EditableProviderConfig {
+  const legacyConfig = config as EditableProviderConfig & { enableAutoMode?: unknown };
   return {
     ...config,
     customEnv: removeManagedCustomEnv(config.customEnv ?? {}),
     disableClaudeAttribution: config.disableClaudeAttribution !== false,
     disableNonessentialTraffic: config.disableNonessentialTraffic !== false,
-    enableAutoMode: config.enableAutoMode !== false,
+    permissionDefaultMode: normalizePermissionDefaultMode(config.permissionDefaultMode, legacyConfig.enableAutoMode),
     enableAutoTheme: config.enableAutoTheme !== false
   };
+}
+
+function normalizePermissionDefaultMode(value: unknown, legacyEnableAutoMode?: unknown): PermissionDefaultMode {
+  if (value === "none" || value === "auto" || value === "bypassPermissions") {
+    return value;
+  }
+  return legacyEnableAutoMode === true ? "auto" : "none";
 }
 
 function removeManagedCustomEnv(customEnv: Record<string, string>): Record<string, string> {

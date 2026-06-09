@@ -1,4 +1,5 @@
 export type ProviderId = "deepseek" | "zhipu" | "mimo" | string;
+export type PermissionDefaultMode = "none" | "auto" | "bypassPermissions";
 
 export interface ModelSlots {
   model?: string;
@@ -35,7 +36,7 @@ export interface EditableProviderConfig {
   maxEffort: boolean;
   disableClaudeAttribution: boolean;
   disableNonessentialTraffic: boolean;
-  enableAutoMode: boolean;
+  permissionDefaultMode: PermissionDefaultMode;
   enableAutoTheme: boolean;
 }
 

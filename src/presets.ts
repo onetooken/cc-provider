@@ -77,7 +77,7 @@ export function configFromPreset(preset: ProviderPreset): EditableProviderConfig
     maxEffort: preset.defaultEnv.CLAUDE_CODE_EFFORT_LEVEL === "max",
     disableClaudeAttribution: true,
     disableNonessentialTraffic: preset.defaultEnv.CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC !== "0",
-    enableAutoMode: true,
+    permissionDefaultMode: "none",
     enableAutoTheme: true
   };
 }

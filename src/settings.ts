@@ -1,7 +1,13 @@
 import * as fs from "node:fs/promises";
 import * as os from "node:os";
 import * as path from "node:path";
-import { ApplySettingsInput, ApplySettingsResult, EditableProviderConfig, SettingsReadResult } from "./types";
+import {
+  ApplySettingsInput,
+  ApplySettingsResult,
+  EditableProviderConfig,
+  PermissionDefaultMode,
+  SettingsReadResult
+} from "./types";
 
 export const CLAUDE_SETTINGS_SCHEMA = "https://json.schemastore.org/claude-code-settings.json";
 
@@ -22,6 +28,7 @@ const DISABLED_ATTRIBUTION = {
   pr: ""
 };
 
+const MANAGED_PERMISSION_DEFAULT_MODES = new Set<unknown>(["auto", "bypassPermissions"]);
 const REDACTED_SECRET = "••••••••••••";
 const SECRET_KEY_PATTERN = /token|auth|api[_-]?key|apikey|secret/i;
 
@@ -90,7 +97,7 @@ export function applyProviderToSettings(
 
   settings.env = env;
   applyAttributionSettings(settings, input.config.disableClaudeAttribution);
-  applyPermissionDefaultModeSettings(settings, input.config.enableAutoMode);
+  applyPermissionDefaultModeSettings(settings, getPermissionDefaultMode(input.config));
   applyThemeSettings(settings, input.config.enableAutoTheme);
   return { settings, managedEnvKeys: managedKeys };
 }
@@ -170,28 +177,38 @@ function isDisabledAttribution(value: unknown): boolean {
   return isRecord(value) && value.commit === "" && value.pr === "";
 }
 
-function applyPermissionDefaultModeSettings(settings: Record<string, unknown>, enableAutoMode: boolean): void {
+function applyPermissionDefaultModeSettings(settings: Record<string, unknown>, mode: PermissionDefaultMode): void {
   const permissions = isRecord(settings.permissions) ? { ...settings.permissions } : {};
-  if (enableAutoMode) {
-    permissions.defaultMode = "auto";
+  if (mode !== "none") {
+    permissions.defaultMode = mode;
     settings.permissions = permissions;
-    if (settings.defaultMode === "auto") {
-      delete settings.defaultMode;
-    }
-    return;
-  }
-
-  if (permissions.defaultMode === "auto") {
+  } else if (isManagedPermissionDefaultMode(permissions.defaultMode)) {
     delete permissions.defaultMode;
   }
-  if (Object.keys(permissions).length > 0) {
-    settings.permissions = permissions;
-  } else if (isRecord(settings.permissions)) {
-    delete settings.permissions;
+
+  if (mode === "none") {
+    if (Object.keys(permissions).length > 0) {
+      settings.permissions = permissions;
+    } else if (isRecord(settings.permissions)) {
+      delete settings.permissions;
+    }
   }
-  if (settings.defaultMode === "auto") {
+
+  if (isManagedPermissionDefaultMode(settings.defaultMode)) {
     delete settings.defaultMode;
   }
+}
+
+function isManagedPermissionDefaultMode(value: unknown): value is Exclude<PermissionDefaultMode, "none"> {
+  return MANAGED_PERMISSION_DEFAULT_MODES.has(value);
+}
+
+function getPermissionDefaultMode(config: EditableProviderConfig): PermissionDefaultMode {
+  const legacyConfig = config as EditableProviderConfig & { enableAutoMode?: unknown; permissionDefaultMode?: unknown };
+  if (legacyConfig.permissionDefaultMode === "none" || isManagedPermissionDefaultMode(legacyConfig.permissionDefaultMode)) {
+    return legacyConfig.permissionDefaultMode;
+  }
+  return legacyConfig.enableAutoMode === true ? "auto" : "none";
 }
 
 function applyThemeSettings(settings: Record<string, unknown>, enableAutoTheme: boolean): void {

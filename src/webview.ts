@@ -406,9 +406,13 @@ export function getWebviewHtml(webview: vscode.Webview, locale: AppLocale, messa
         <span>${escapeHtml(messages.disableNonessentialTraffic)}</span>
         <input id="disableNonessentialTraffic" type="checkbox">
       </label>
-      <label class="switch-row">
-        <span>${escapeHtml(messages.autoMode)}</span>
-        <input id="enableAutoMode" type="checkbox">
+      <label>
+        <span>${escapeHtml(messages.permissionDefaultMode)}</span>
+        <select id="permissionDefaultMode">
+          <option value="none">${escapeHtml(messages.permissionDefaultModeNone)}</option>
+          <option value="auto">${escapeHtml(messages.permissionDefaultModeAuto)}</option>
+          <option value="bypassPermissions">${escapeHtml(messages.permissionDefaultModeBypass)}</option>
+        </select>
       </label>
       <label class="switch-row">
         <span>${escapeHtml(messages.themeAuto)}</span>
@@ -481,7 +485,7 @@ export function getWebviewHtml(webview: vscode.Webview, locale: AppLocale, messa
       "maxEffort",
       "disableClaudeAttribution",
       "disableNonessentialTraffic",
-      "enableAutoMode",
+      "permissionDefaultMode",
       "enableAutoTheme"
     ];
     const el = Object.fromEntries(ids.map((id) => [id, document.getElementById(id)]));
@@ -565,7 +569,7 @@ export function getWebviewHtml(webview: vscode.Webview, locale: AppLocale, messa
       el.maxEffort.checked = Boolean(config.maxEffort);
       el.disableClaudeAttribution.checked = config.disableClaudeAttribution !== false;
       el.disableNonessentialTraffic.checked = config.disableNonessentialTraffic !== false;
-      el.enableAutoMode.checked = config.enableAutoMode !== false;
+      el.permissionDefaultMode.value = permissionDefaultModeFromConfig(config);
       el.enableAutoTheme.checked = config.enableAutoTheme !== false;
       renderEnvRows(config.customEnv || {});
       document.getElementById("settingsPath").textContent = state.settingsPath || "";
@@ -653,9 +657,16 @@ export function getWebviewHtml(webview: vscode.Webview, locale: AppLocale, messa
         maxEffort: el.maxEffort.checked,
         disableClaudeAttribution: el.disableClaudeAttribution.checked,
         disableNonessentialTraffic: el.disableNonessentialTraffic.checked,
-        enableAutoMode: el.enableAutoMode.checked,
+        permissionDefaultMode: el.permissionDefaultMode.value,
         enableAutoTheme: el.enableAutoTheme.checked
       };
+    }
+
+    function permissionDefaultModeFromConfig(config) {
+      if (["none", "auto", "bypassPermissions"].includes(config.permissionDefaultMode)) {
+        return config.permissionDefaultMode;
+      }
+      return config.enableAutoMode === true ? "auto" : "none";
     }
 
     function collectEnv() {

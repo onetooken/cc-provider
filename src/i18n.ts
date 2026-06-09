@@ -10,7 +10,6 @@ export interface AppMessages {
   appliedConfig: string;
   appliedConfigWithBackup: string;
   appliedToPath: string;
-  autoMode: string;
   baseUrl: string;
   behavior: string;
   confirmDelete: string;
@@ -37,6 +36,10 @@ export interface AppMessages {
   noProviderToDelete: string;
   openSettings: string;
   pending: string;
+  permissionDefaultMode: string;
+  permissionDefaultModeAuto: string;
+  permissionDefaultModeBypass: string;
+  permissionDefaultModeNone: string;
   privacy: string;
   providerCannotDelete: string;
   providerDeleted: string;
@@ -69,7 +72,6 @@ const EN: AppMessages = {
   appliedConfig: "CC Provider applied the configuration.",
   appliedConfigWithBackup: "CC Provider applied the configuration. Backup: {path}",
   appliedToPath: "Applied to {path}.",
-  autoMode: "Enable auto mode by default",
   baseUrl: "Base URL",
   behavior: "Behavior",
   confirmDelete: "Delete {name}? This cannot be undone.",
@@ -96,6 +98,10 @@ const EN: AppMessages = {
   noProviderToDelete: "No provider selected for deletion.",
   openSettings: "Open settings",
   pending: "Pending",
+  permissionDefaultMode: "Permission default mode",
+  permissionDefaultModeAuto: "auto",
+  permissionDefaultModeBypass: "bypassPermissions",
+  permissionDefaultModeNone: "Do not manage",
   privacy: "Privacy",
   providerCannotDelete: "Built-in providers cannot be deleted. Restore defaults instead.",
   providerDeleted: "Custom provider deleted.",
@@ -128,7 +134,6 @@ const ZH_CN: AppMessages = {
   appliedConfig: "CC Provider 已应用配置。",
   appliedConfigWithBackup: "CC Provider 已应用配置。备份：{path}",
   appliedToPath: "已应用到 {path}。",
-  autoMode: "默认开启 auto mode",
   baseUrl: "Base URL",
   behavior: "行为",
   confirmDelete: "确认删除 {name}？此操作无法撤销。",
@@ -155,6 +160,10 @@ const ZH_CN: AppMessages = {
   noProviderToDelete: "找不到要删除的 Provider。",
   openSettings: "打开 settings",
   pending: "待应用",
+  permissionDefaultMode: "权限默认模式",
+  permissionDefaultModeAuto: "auto",
+  permissionDefaultModeBypass: "bypassPermissions",
+  permissionDefaultModeNone: "不管理",
   privacy: "隐私",
   providerCannotDelete: "内置 Provider 不能删除，可以恢复默认值。",
   providerDeleted: "已删除自定义 Provider。",

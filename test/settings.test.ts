@@ -54,6 +54,14 @@ describe("provider presets", () => {
       CLAUDE_CODE_SUBAGENT_MODEL: "mimo-v2.5-pro[1m]"
     });
   });
+
+  it("defaults provider permission mode to none", () => {
+    for (const providerId of ["deepseek", "zhipu", "mimo"]) {
+      const preset = getPreset(providerId);
+      expect(preset).toBeTruthy();
+      expect(configFromPreset(preset!).permissionDefaultMode).toBe("none");
+    }
+  });
 });
 
 describe("settings merge", () => {
@@ -67,7 +75,7 @@ describe("settings merge", () => {
       maxEffort: false,
       disableClaudeAttribution: true,
       disableNonessentialTraffic: true,
-      enableAutoMode: true,
+      permissionDefaultMode: "auto",
       enableAutoTheme: true
     };
 
@@ -104,7 +112,7 @@ describe("settings merge", () => {
       maxEffort: false,
       disableClaudeAttribution: false,
       disableNonessentialTraffic: false,
-      enableAutoMode: false,
+      permissionDefaultMode: "none",
       enableAutoTheme: false
     };
 
@@ -140,7 +148,7 @@ describe("settings merge", () => {
       maxEffort: false,
       disableClaudeAttribution: false,
       disableNonessentialTraffic: true,
-      enableAutoMode: false,
+      permissionDefaultMode: "none",
       enableAutoTheme: true
     };
 
@@ -156,7 +164,7 @@ describe("settings merge", () => {
     expect(result.settings.includeCoAuthoredBy).toBeUndefined();
   });
 
-  it("removes plugin default auto mode when unchecked", () => {
+  it("writes bypassPermissions default mode", () => {
     const config: EditableProviderConfig = {
       providerId: "custom",
       displayName: "Custom",
@@ -166,20 +174,68 @@ describe("settings merge", () => {
       maxEffort: false,
       disableClaudeAttribution: false,
       disableNonessentialTraffic: false,
-      enableAutoMode: false,
+      permissionDefaultMode: "bypassPermissions",
       enableAutoTheme: false
     };
 
     const result = applyProviderToSettings(
       {
-        defaultMode: "auto",
-        permissions: { defaultMode: "auto", allow: ["Bash(git status)"] }
+        defaultMode: "bypassPermissions",
+        permissions: { allow: ["Bash(git status)"] }
+      },
+      { config }
+    );
+
+    expect(result.settings.defaultMode).toBeUndefined();
+    expect(result.settings.permissions).toEqual({
+      allow: ["Bash(git status)"],
+      defaultMode: "bypassPermissions"
+    });
+  });
+
+  it.each(["auto", "bypassPermissions"])("removes plugin default %s mode when none is selected", (mode) => {
+    const config: EditableProviderConfig = {
+      providerId: "custom",
+      displayName: "Custom",
+      baseUrl: "https://example.com/anthropic",
+      models: {},
+      customEnv: {},
+      maxEffort: false,
+      disableClaudeAttribution: false,
+      disableNonessentialTraffic: false,
+      permissionDefaultMode: "none",
+      enableAutoTheme: false
+    };
+
+    const result = applyProviderToSettings(
+      {
+        defaultMode: mode,
+        permissions: { defaultMode: mode, allow: ["Bash(git status)"] }
       },
       { config }
     );
 
     expect(result.settings.defaultMode).toBeUndefined();
     expect(result.settings.permissions).toEqual({ allow: ["Bash(git status)"] });
+  });
+
+  it("migrates legacy enableAutoMode true to auto", () => {
+    const config = {
+      providerId: "custom",
+      displayName: "Custom",
+      baseUrl: "https://example.com/anthropic",
+      models: {},
+      customEnv: {},
+      maxEffort: false,
+      disableClaudeAttribution: false,
+      disableNonessentialTraffic: false,
+      enableAutoMode: true,
+      enableAutoTheme: false
+    } as unknown as EditableProviderConfig;
+
+    const result = applyProviderToSettings({}, { config });
+
+    expect(result.settings.permissions).toEqual({ defaultMode: "auto" });
   });
 
   it("removes plugin theme auto when unchecked", () => {
@@ -192,7 +248,7 @@ describe("settings merge", () => {
       maxEffort: false,
       disableClaudeAttribution: false,
       disableNonessentialTraffic: false,
-      enableAutoMode: false,
+      permissionDefaultMode: "none",
       enableAutoTheme: false
     };
 
