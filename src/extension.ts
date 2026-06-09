@@ -1,6 +1,6 @@
 import * as vscode from "vscode";
 import * as path from "node:path";
-import { PROVIDER_PRESETS, configFromPreset, getPreset } from "./presets";
+import { PROVIDER_PRESETS, configFromPreset, getPreset, migrateBuiltinModels } from "./presets";
 import {
   CORE_MANAGED_ENV_KEYS,
   getClaudeSettingsPath,
@@ -13,10 +13,12 @@ import { getWebviewHtml } from "./webview";
 import { AppMessages, formatMessage, getLocale, getMessages } from "./i18n";
 
 const CONFIGS_KEY = "ccProvider.configs";
+const CONFIG_SCHEMA_VERSION_KEY = "ccProvider.configSchemaVersion";
 const ACTIVE_PROVIDER_KEY = "ccProvider.activeProvider";
 const APPLIED_PROVIDER_KEY = "ccProvider.appliedProvider";
 const MANAGED_ENV_KEYS_KEY = "ccProvider.managedEnvKeys";
 const SECRET_PREFIX = "ccProvider.authToken.";
+const CURRENT_CONFIG_SCHEMA_VERSION = 1;
 
 export function activate(context: vscode.ExtensionContext): void {
   const provider = new CcProviderViewProvider(context);
@@ -87,7 +89,7 @@ class CcProviderViewProvider implements vscode.WebviewViewProvider {
 
   private async saveConfig(payload: unknown): Promise<void> {
     const incoming = parseConfigPayload(payload, this.messages);
-    const configs = this.getConfigs();
+    const configs = await this.getConfigs();
     configs[incoming.providerId] = withoutTokenState(incoming);
     await this.context.globalState.update(CONFIGS_KEY, configs);
     await this.context.globalState.update(ACTIVE_PROVIDER_KEY, incoming.providerId);
@@ -97,7 +99,7 @@ class CcProviderViewProvider implements vscode.WebviewViewProvider {
 
   private async applyConfig(payload: unknown): Promise<void> {
     const incoming = parseConfigPayload(payload, this.messages);
-    const configs = this.getConfigs();
+    const configs = await this.getConfigs();
     configs[incoming.providerId] = withoutTokenState(incoming);
     await this.context.globalState.update(CONFIGS_KEY, configs);
     await this.context.globalState.update(ACTIVE_PROVIDER_KEY, incoming.providerId);
@@ -124,7 +126,7 @@ class CcProviderViewProvider implements vscode.WebviewViewProvider {
   }
 
   private async addProvider(): Promise<void> {
-    const configs = this.getConfigs();
+    const configs = await this.getConfigs();
     const id = `custom-${Date.now()}`;
     configs[id] = {
       providerId: id,
@@ -157,7 +159,7 @@ class CcProviderViewProvider implements vscode.WebviewViewProvider {
     if (getPreset(providerId)) {
       throw new Error(this.messages.providerCannotDelete);
     }
-    const configs = this.getConfigs();
+    const configs = await this.getConfigs();
     const providerName = configs[providerId]?.displayName || providerId;
     const confirmed = await vscode.window.showWarningMessage(
       formatMessage(this.messages.confirmDelete, { name: providerName }),
@@ -184,7 +186,7 @@ class CcProviderViewProvider implements vscode.WebviewViewProvider {
     if (!preset) {
       throw new Error(this.messages.noPresetFound);
     }
-    const configs = this.getConfigs();
+    const configs = await this.getConfigs();
     configs[preset.id] = configFromPreset(preset);
     await this.context.globalState.update(CONFIGS_KEY, configs);
     await this.postState(this.messages.defaultSettingsRestored);
@@ -203,7 +205,7 @@ class CcProviderViewProvider implements vscode.WebviewViewProvider {
   }
 
   private async postState(status?: string): Promise<void> {
-    const configs = this.getConfigs();
+    const configs = await this.getConfigs();
     await this.context.globalState.update(CONFIGS_KEY, configs);
     const activeProvider = this.context.globalState.get<string>(ACTIVE_PROVIDER_KEY, PROVIDER_PRESETS[0].id);
     const appliedProvider = this.context.globalState.get<string | undefined>(APPLIED_PROVIDER_KEY);
@@ -234,11 +236,17 @@ class CcProviderViewProvider implements vscode.WebviewViewProvider {
     });
   }
 
-  private getConfigs(): Record<string, EditableProviderConfig> {
+  private async getConfigs(): Promise<Record<string, EditableProviderConfig>> {
     const saved = this.context.globalState.get<Record<string, EditableProviderConfig>>(CONFIGS_KEY, {});
+    const configSchemaVersion = this.context.globalState.get<number>(CONFIG_SCHEMA_VERSION_KEY, 0);
+    const shouldMigrateConfig = configSchemaVersion < CURRENT_CONFIG_SCHEMA_VERSION;
     const configs: Record<string, EditableProviderConfig> = { ...saved };
     for (const preset of PROVIDER_PRESETS) {
-      configs[preset.id] = migrateBuiltinConfig(saved[preset.id] ?? configFromPreset(preset));
+      configs[preset.id] = normalizeStoredConfig(saved[preset.id] ?? configFromPreset(preset), shouldMigrateConfig);
+    }
+    if (shouldMigrateConfig) {
+      await this.context.globalState.update(CONFIGS_KEY, configs);
+      await this.context.globalState.update(CONFIG_SCHEMA_VERSION_KEY, CURRENT_CONFIG_SCHEMA_VERSION);
     }
     return configs;
   }
@@ -324,36 +332,12 @@ function withoutTokenState(config: EditableProviderConfig): EditableProviderConf
   return { ...sanitizeConfig(config), tokenConfigured: undefined };
 }
 
-function migrateBuiltinConfig(config: EditableProviderConfig): EditableProviderConfig {
+function normalizeStoredConfig(config: EditableProviderConfig, migrateModels: boolean): EditableProviderConfig {
   const sanitized = sanitizeConfig(config);
-  if (config.providerId === "deepseek") {
-    return {
-      ...sanitized,
-      models: replaceModelDefaults(sanitized.models, {
-        "deepseek-v4-flash": "deepseek-v4-flash[1m]"
-      })
-    };
+  if (!migrateModels) {
+    return sanitized;
   }
-  if (config.providerId === "zhipu") {
-    return {
-      ...sanitized,
-      models: replaceModelDefaults(sanitized.models, {
-        "glm-4.7": "glm-5.1",
-        "glm-4.5-air": "glm-5.1"
-      })
-    };
-  }
-  if (config.providerId === "mimo") {
-    return {
-      ...sanitized,
-      models: replaceModelDefaults(sanitized.models, {
-        "mimo-v2.5-pro": "mimo-v2.5-pro[1m]",
-        "mimo-v2.5": "mimo-v2.5-pro[1m]",
-        "mimo-v2.5[1m]": "mimo-v2.5-pro[1m]"
-      })
-    };
-  }
-  return sanitized;
+  return { ...sanitized, models: migrateBuiltinModels(sanitized.providerId, sanitized.models) };
 }
 
 function sanitizeConfig(config: EditableProviderConfig): EditableProviderConfig {
@@ -377,26 +361,6 @@ function normalizePermissionDefaultMode(value: unknown, legacyEnableAutoMode?: u
 
 function removeManagedCustomEnv(customEnv: Record<string, string>): Record<string, string> {
   return Object.fromEntries(Object.entries(customEnv).filter(([key]) => !CORE_MANAGED_ENV_KEYS.includes(key)));
-}
-
-function replaceModelDefaults(
-  models: EditableProviderConfig["models"],
-  replacements: Record<string, string>
-): EditableProviderConfig["models"] {
-  return {
-    model: replaceDefaultModel(models.model, replacements),
-    opus: replaceDefaultModel(models.opus, replacements),
-    sonnet: replaceDefaultModel(models.sonnet, replacements),
-    haiku: replaceDefaultModel(models.haiku, replacements),
-    subagent: replaceDefaultModel(models.subagent, replacements)
-  };
-}
-
-function replaceDefaultModel(value: string | undefined, replacements: Record<string, string>): string | undefined {
-  if (!value) {
-    return value;
-  }
-  return replacements[value] ?? value;
 }
 
 function requiredString(value: unknown, field: string, messages: AppMessages): string {

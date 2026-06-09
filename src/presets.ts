@@ -1,4 +1,6 @@
-import { EditableProviderConfig, ProviderPreset } from "./types";
+import { EditableProviderConfig, ModelSlots, ProviderPreset } from "./types";
+
+const MODEL_SLOT_KEYS = ["model", "opus", "sonnet", "haiku", "subagent"] as const;
 
 export const PROVIDER_PRESETS: ProviderPreset[] = [
   {
@@ -84,4 +86,73 @@ export function configFromPreset(preset: ProviderPreset): EditableProviderConfig
 
 export function getPreset(id: string): ProviderPreset | undefined {
   return PROVIDER_PRESETS.find((preset) => preset.id === id);
+}
+
+export function migrateBuiltinModels(providerId: string, models: ModelSlots): ModelSlots {
+  const preset = getPreset(providerId);
+  if (!preset) {
+    return { ...models };
+  }
+
+  const legacyDefaults = LEGACY_MODEL_DEFAULTS[providerId] ?? [];
+  return legacyDefaults.some((legacyModels) => modelSlotsMatch(models, legacyModels)) ? { ...preset.models } : { ...models };
+}
+
+const LEGACY_MODEL_DEFAULTS: Record<string, ModelSlots[]> = {
+  deepseek: [
+    {
+      model: "deepseek-v4-pro[1m]",
+      opus: "deepseek-v4-pro[1m]",
+      sonnet: "deepseek-v4-pro[1m]",
+      haiku: "deepseek-v4-flash",
+      subagent: "deepseek-v4-flash"
+    }
+  ],
+  zhipu: [
+    {
+      opus: "glm-4.7",
+      sonnet: "glm-4.7",
+      haiku: "glm-4.7",
+      subagent: "glm-4.7"
+    },
+    {
+      opus: "glm-4.7",
+      sonnet: "glm-4.7",
+      haiku: "glm-4.5-air",
+      subagent: "glm-4.5-air"
+    },
+    {
+      opus: "glm-4.5-air",
+      sonnet: "glm-4.5-air",
+      haiku: "glm-4.5-air",
+      subagent: "glm-4.5-air"
+    }
+  ],
+  mimo: [
+    {
+      model: "mimo-v2.5-pro",
+      opus: "mimo-v2.5-pro",
+      sonnet: "mimo-v2.5-pro",
+      haiku: "mimo-v2.5-pro",
+      subagent: "mimo-v2.5-pro"
+    },
+    {
+      model: "mimo-v2.5",
+      opus: "mimo-v2.5",
+      sonnet: "mimo-v2.5",
+      haiku: "mimo-v2.5",
+      subagent: "mimo-v2.5"
+    },
+    {
+      model: "mimo-v2.5[1m]",
+      opus: "mimo-v2.5[1m]",
+      sonnet: "mimo-v2.5[1m]",
+      haiku: "mimo-v2.5[1m]",
+      subagent: "mimo-v2.5[1m]"
+    }
+  ]
+};
+
+function modelSlotsMatch(actual: ModelSlots, expected: ModelSlots): boolean {
+  return MODEL_SLOT_KEYS.every((key) => (actual[key] ?? "") === (expected[key] ?? ""));
 }

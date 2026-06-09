@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.0.4
+
+- Added config schema version tracking so legacy provider migrations run only once.
+- Fixed manually edited built-in provider model slots reverting to preset defaults after saving.
+
 ## 0.0.3
 
 - Added permission default mode selection with `none`, `auto`, and `bypassPermissions` options.
